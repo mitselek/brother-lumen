@@ -156,15 +156,26 @@ const HEALS = [
 // ---------- state ----------
 const KEY = 'brother-lumen-v1';
 const DEFAULT = {
-  v: 1, level: 1, base: { str: null, dex: null, con: null, int: null, wis: null, cha: null },
+  v: 1, rev: 2, level: 1, base: { str: 12, dex: 10, con: 15, int: 9, wis: 18, cha: 11 },
   lineage: 'wis', pool: [], skills: ['insight', 'medicine', 'persuasion', 'religion'], saves: ['wis', 'cha'],
-  ac: 18, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ac: 16, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
   slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, gold: 0, notes: '', log: [],
   secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator, 24', knows: 'knows' }],
 };
 let S = load();
 function load() {
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) return { ...structuredClone(DEFAULT), ...s }; } catch (e) {}
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.v === 1) {
+      const m = { ...structuredClone(DEFAULT), ...s };
+      if (!(s.rev >= 2)) { // rev 2: Mihkel's rolled stats placed; scale mail until level 4
+        if (AB.every(k => s.base?.[k] == null)) { m.base = structuredClone(DEFAULT.base); m.pool = []; }
+        if (s.ac === 18) m.ac = 16;
+        m.rev = 2;
+      }
+      return m;
+    }
+  } catch (e) {}
   return structuredClone(DEFAULT);
 }
 function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -645,7 +656,7 @@ function renderSheet() {
       <div class="card stat"><div class="v">${spellDC()}</div><div class="k">spell save DC</div></div>
       <div class="card stat"><div class="v">${fmt(spellAtk())}</div><div class="k">spell attack</div></div>
     </div>
-    <div class="sub" style="margin-top:4px">Darkvision 60 ft · passive Perception ${10 + skillBonus(SKILLS[11])}</div>
+    <div class="sub" style="margin-top:4px">Darkvision 60 ft · passive Perception ${10 + skillBonus(SKILLS[11])} · ${S.level >= 4 ? 'chain mail + shield (AC 18)' : 'scale mail + shield, Stealth at disadvantage; chain mail at level 4'}</div>
 
     <h2>Hit points</h2>
     <div class="card">
@@ -730,11 +741,11 @@ function renderRoad() {
     [1, '<b>Disciple of Life</b>; heavy armor; Bless, Cure Wounds', 'Every healing spell heals +2 + spell level'],
     [2, '<b>Channel Divinity: Preserve Life</b>', 'Split 5 × level HP among allies within 30 ft (up to half their max)'],
     [3, 'Prayer of Healing, Lesser Restoration; Spiritual Weapon', 'Heal 6 after a fight; cure disease, poison, blindness'],
-    [4, 'Ability increase: <b>Wisdom +2</b>', 'Wisdom adds to most heals'],
+    [4, 'Ability increase: <b>+1 Strength, +1 Constitution</b>', 'Strength 13: switch to chain mail, AC 18 at full speed'],
     [5, 'Mass Healing Word; Revivify, Beacon of Hope', 'Heal 6 mid-fight; bring back the just-dead (300 gp diamonds)'],
     [6, '<b>Blessed Healer</b>', 'Healing others heals you 2 + spell level'],
     [7, 'Death Ward, Guardian of Faith', 'An ally who would drop to 0 drops to 1'],
-    [8, 'Wisdom to 20; <b>Divine Strike</b>', '+1d8 radiant on weapon hits'],
+    [8, 'Ability increase or feat; <b>Divine Strike</b>', 'Wisdom is already 20: War Caster or Resilient (Con)'],
     [9, 'Mass Cure Wounds, Raise Dead', 'Big group heal; raise the long-dead'],
     [11, 'Heal', '70 HP in one spell (+8 from Disciple of Life)'],
     [12, 'Ability increase', 'War Caster or Resilient (Con) for concentration'],
