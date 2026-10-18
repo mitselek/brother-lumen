@@ -551,7 +551,8 @@ function renderBuilder() {
 }
 
 // ---------- sheet ----------
-let poolPick = null, resetArmed = false;
+let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false;
+const hasStats = () => S.pool.length > 0 || AB.some(k => S.base[k] != null);
 function toast(msg) {
   const t = document.getElementById('toast'); t.innerHTML = msg; t.style.display = 'block';
   clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 4500);
@@ -594,7 +595,7 @@ function renderSheet() {
 
     <h2>Abilities</h2>
     <div class="row" style="margin-bottom:8px">
-      <button data-act="pool-roll">Roll stats (4d6 drop lowest ×6)</button>
+      <button data-act="pool-roll" ${statsArmed ? 'style="color:var(--rose)"' : ''}>${statsRolling ? 'Rolling…' : statsArmed ? 'Tap again: this replaces your current stats' : hasStats() ? 'Roll new stats' : 'Roll stats (4d6 drop lowest ×6)'}</button>
       <label class="sub">+2 goes to <select data-field="lineage">${AB.map(k => `<option value="${k}" ${S.lineage === k ? 'selected' : ''}>${AB_NAME[k]}</option>`).join('')}</select></label>
     </div>
     ${S.pool.length ? `<div class="row" style="margin-bottom:8px"><span class="sub">${poolPick == null ? 'Tap a number, then an ability:' : 'Now tap an ability:'}</span>${pool}</div>` : ''}
@@ -786,13 +787,19 @@ function act(el, e) {
     }
     case 'lvl': S.level = Math.min(20, Math.max(1, S.level + +k)); S.hdUsed = Math.min(S.hdUsed, S.level); break;
     case 'pool-roll':
-      if (S.pool.length + 6 > 12) return toast('Place the rolled numbers first.');
+      if (statsRolling) return showTab('tray');
+      if (hasStats() && !statsArmed) {
+        statsArmed = true; setTimeout(() => { statsArmed = false; renderSheet(); }, 3000); break;
+      }
     {
+      statsArmed = false; statsRolling = true; poolPick = null;
+      S.pool = []; AB.forEach(k => S.base[k] = null); save(); renderSheet();
       const batch = [];
       for (let i = 0; i < 6; i++) roll({ dice: [6, 6, 6, 6], keep: 'dl1', label: `Ability roll ${i + 1} of 6`,
         onDone: t => {
           batch.push(t); S.pool.push(t); S.pool.sort((a, b) => b - a); poolPick = null; save(); renderSheet();
           if (batch.length < 6) return;
+          statsRolling = false; renderSheet();
           const sorted = [...batch].sort((a, b) => b - a);
           setTimeout(() => writeRunes(sorted), 1200);
           return `All six: ${sorted.join(', ')}`;
