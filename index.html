@@ -158,7 +158,7 @@ const DEFAULT = {
   lineage: 'wis', pool: [], skills: ['insight', 'medicine', 'persuasion', 'religion'], saves: ['wis', 'cha'],
   ac: 18, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
   slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, gold: 0, notes: '', log: [],
-  secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator', knows: 'knows' }],
+  secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator, 24', knows: 'knows' }],
 };
 let S = load();
 function load() {
@@ -611,7 +611,7 @@ function renderSheet() {
       <span class="grow">${s[1]} <span class="sub">${s[2]}</span></span><button class="b" data-act="skill" data-k="${s[0]}">${fmt(skillBonus(s))}</button></div>`).join('')}</div>
 
     <h2>Backstory</h2>
-    <div class="card sub" style="color:var(--text)">Raised in Lathander's dawn temple beside the village of Koidu. The capital, Dööm,
+    <div class="card sub" style="color:var(--text)">Lumen is 23. Raised in Lathander's dawn temple beside the village of Koidu. The capital, Dööm,
       has since swallowed both. The kingdom hunts rogue mages, so Lumen hides what he can do, the powerful things most of all.</div>
 
     <h2>Who knows about his magic</h2>
