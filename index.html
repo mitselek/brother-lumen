@@ -368,57 +368,91 @@ function clearDice() {
   dice = []; document.getElementById('labels').innerHTML = '';
 }
 
-// ---------- magic letters: ability rolls written on the tray ----------
-const RUNE_FONT = '"Cinzel Decorative", Georgia, serif', RUNE_EACH = 650; // ms per number
+// ---------- magic letters: ability rolls engraved on the tray ----------
+// Each stat is engraved as soon as its roll settles, while the next roll runs; the row stays
+// sorted. When all six are in, the standard array appears underneath for comparison.
+const RUNE_FONT = '"Cinzel Decorative", Georgia, serif', RUNE_EACH = 650; // ms to engrave one number
+const STANDARD = [15, 14, 13, 12, 10, 8];
 let runes = null;
 function hideRunes() {
   if (!runes) return;
   scene.remove(runes.mesh); runes.tex.dispose(); runes.mesh.geometry.dispose(); runes = null;
 }
 const runeWidth = (cv) => Math.min(2 * halfX * 0.9, 2 * halfZ * 0.9 * cv.width / cv.height);
-async function writeRunes(nums) {
-  if (rolling) return;
-  try { await document.fonts.load(`700 120px ${RUNE_FONT}`); } catch (e) {}
-  if (rolling) return;
-  hideRunes(); clearDice();
-  const cols = halfZ > halfX ? 3 : 6, cell = 340, cv = document.createElement('canvas');
-  cv.width = cols * cell; cv.height = Math.ceil(nums.length / cols) * cell;
+function startRunes() {
+  hideRunes();
+  document.fonts.load(`700 120px ${RUNE_FONT}`).catch(() => {});
+  const cols = halfZ > halfX ? 3 : 6, cell = 340, rowH = 470, cv = document.createElement('canvas');
+  cv.width = cols * cell; cv.height = Math.ceil(6 / cols) * rowH + 120;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const w = runeWidth(cv);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, w * cv.height / cv.width),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   mesh.rotation.x = -Math.PI / 2; mesh.position.y = 0.02; scene.add(mesh);
-  runes = { mesh, cv, w, g: cv.getContext('2d'), tex, nums, cols, cell, start: performance.now() };
-  requestAnimationFrame(drawRunes);
+  runes = { mesh, cv, w, g: cv.getContext('2d'), tex, cols, cell, rowH, entries: [], compareAt: null };
 }
+function addRune(v) {
+  if (!runes) startRunes();
+  runes.entries.push({ v, born: performance.now() });
+  runes.entries.sort((a, b) => b.v - a.v);
+  animateRunes();
+}
+function compareRunes() { if (runes) { runes.compareAt = performance.now(); animateRunes(); } }
+function animateRunes() { if (!runes.anim) { runes.anim = true; requestAnimationFrame(drawRunes); } }
 function drawRunes(now) {
   if (!runes) return;
-  const { g, cv, nums, cols, cell } = runes, t = now - runes.start;
+  const { g, cv, cols, cell, rowH, entries, compareAt } = runes;
   g.clearRect(0, 0, cv.width, cv.height);
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  nums.forEach((n, i) => {
-    const p = Math.min(1, Math.max(0, (t - i * RUNE_EACH) / RUNE_EACH));
-    if (!p) return;
-    const cx = (i % cols + 0.5) * cell, cy = (Math.floor(i / cols) + 0.5) * cell;
+  let busy = false;
+  entries.forEach((e, i) => {
+    const p = Math.min(1, (now - e.born) / RUNE_EACH);
+    if (p < 1) busy = true;
+    if (p <= 0) return;
+    const cx = (i % cols + 0.5) * cell, cy = Math.floor(i / cols) * rowH + cell / 2;
     g.save();
     g.beginPath(); g.rect(cx - cell / 2, 0, cell * p, cv.height); g.clip(); // the ink runs left to right
     g.font = `700 ${cell * 0.58}px ${RUNE_FONT}`;
     g.shadowColor = '#ffb640'; g.shadowBlur = 40 * (1.6 - p * 0.6);
-    g.fillStyle = '#ffe9b0'; g.fillText(String(n), cx, cy);
-    g.shadowBlur = 12; g.strokeStyle = '#ff9d2e'; g.lineWidth = 3; g.strokeText(String(n), cx, cy);
+    g.fillStyle = '#ffe9b0'; g.fillText(String(e.v), cx, cy);
+    g.shadowBlur = 12; g.strokeStyle = '#ff9d2e'; g.lineWidth = 3; g.strokeText(String(e.v), cx, cy);
     g.restore();
     g.save(); g.globalAlpha = p * 0.7; g.strokeStyle = '#e8b14c'; g.lineWidth = 4; g.shadowColor = '#ffb640'; g.shadowBlur = 20;
     g.beginPath(); g.arc(cx, cy, cell * 0.44, -Math.PI / 2, -Math.PI / 2 + p * 2 * Math.PI); g.stroke(); g.restore();
+    if (compareAt != null) {
+      const q = Math.min(1, (now - compareAt - i * 120) / 500);
+      if (q < 1) busy = true;
+      if (q > 0) {
+        const d = e.v - STANDARD[i];
+        g.save(); g.globalAlpha = q; g.font = `700 ${cell * 0.2}px ${RUNE_FONT}`;
+        g.shadowColor = '#000'; g.shadowBlur = 6;
+        g.fillStyle = '#c9b8d6'; g.fillText(String(STANDARD[i]), cx - cell * 0.12, cy + cell * 0.6);
+        g.fillStyle = d > 0 ? '#7fe0a0' : d < 0 ? '#ff8a70' : '#c9b8d6';
+        g.fillText(d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '=', cx + cell * 0.16, cy + cell * 0.6);
+        g.restore();
+      }
+    }
   });
+  if (compareAt != null && entries.length === 6) {
+    const q = Math.min(1, (now - compareAt - 800) / 500);
+    if (q < 1) busy = true;
+    if (q > 0) {
+      const mine = entries.reduce((a, e) => a + e.v, 0), d = mine - 72;
+      g.save(); g.globalAlpha = q; g.font = `700 ${cell * 0.17}px ${RUNE_FONT}`; g.fillStyle = '#c9b8d6';
+      g.shadowColor = '#000'; g.shadowBlur = 6;
+      g.fillText(`total ${mine} · standard array 72 · ${d > 0 ? '+' + d : d < 0 ? '−' + -d : 'even'}`, cv.width / 2, cv.height - 60);
+      g.restore();
+    }
+  }
   runes.tex.needsUpdate = true;
-  renderer.render(scene, camera);
-  if (t < nums.length * RUNE_EACH + 50) requestAnimationFrame(drawRunes);
+  if (!rolling) renderer.render(scene, camera); // during a roll the dice loop renders every frame
+  if (busy) requestAnimationFrame(drawRunes); else runes.anim = false;
 }
-window.writeRunes = writeRunes;
+window.addRune = addRune; window.compareRunes = compareRunes; window.startRunes = startRunes;
 
 function spawn(sidesList) {
   clearDice();
-  hideRunes();
+  if (!statsRolling) hideRunes();
   const tall = halfZ > halfX, across = tall ? halfX : halfZ, along = tall ? halfZ : halfX;
   const perRow = Math.max(1, Math.floor((2 * across - 1.5) / 1.6));
   sidesList.forEach((sides, i) => {
@@ -795,17 +829,17 @@ function act(el, e) {
       statsArmed = false; statsRolling = true; poolPick = null;
       S.pool = []; AB.forEach(k => S.base[k] = null);
       S.log = S.log.filter(e => !e.label.startsWith('Ability roll')); // old stat rolls leave the log
-      hideRunes(); clearDice(); document.getElementById('result').innerHTML = '';
+      clearDice(); startRunes(); document.getElementById('result').innerHTML = '';
       save(); renderSheet(); renderLog();
       const batch = [];
       for (let i = 0; i < 6; i++) roll({ dice: [6, 6, 6, 6], keep: 'dl1', label: `Ability roll ${i + 1} of 6`,
         onDone: t => {
           batch.push(t); S.pool.push(t); S.pool.sort((a, b) => b - a); poolPick = null; save(); renderSheet();
+          addRune(t);
           if (batch.length < 6) return;
           statsRolling = false; renderSheet();
-          const sorted = [...batch].sort((a, b) => b - a);
-          setTimeout(() => writeRunes(sorted), 1200);
-          return `All six: ${sorted.join(', ')}`;
+          setTimeout(() => { if (!rolling) { clearDice(); compareRunes(); } }, 900);
+          return `All six: ${[...batch].sort((a, b) => b - a).join(', ')}`;
         } });
       return;
     }
