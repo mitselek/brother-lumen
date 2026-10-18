@@ -627,9 +627,9 @@ function renderSheet() {
   const cd = cdMax();
   const nd = cantripDice(), ds = S.level >= 14 ? 2 : S.level >= 8 ? 1 : 0;
   const atks = [
-    ['mace', 'Mace', prof() + mod('str'), `1d6 ${fmt(mod('str'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'bludgeoning'],
+    ['shill', 'Club with Shillelagh', prof() + mod('wis'), `1d8 ${fmt(mod('wis'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'bludgeoning, magical; bonus action to cast, lasts 1 minute'],
+    ['club', 'Club (plain)', prof() + mod('str'), `1d4 ${fmt(mod('str'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'bludgeoning, light'],
     ['xbow', 'Light crossbow', prof() + mod('dex'), `1d8 ${fmt(mod('dex'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'piercing, 80/320 ft'],
-    ['thorn', 'Thorn Whip', spellAtk(), `${nd}d6 piercing`, 'melee spell attack, 30 ft; pulls a Large or smaller target 10 ft closer'],
   ].map(([k, n, hit, dmg, note]) => `<div class="li"><span class="grow"><b>${n}</b><br><span class="sub">${dmg} · ${note}</span></span>
       <button class="b" data-act="atk" data-k="${k}">${fmt(hit)}</button><button class="b" data-act="dmg" data-k="${k}">Dmg</button></div>`).join('');
   const gbL = S.slotSel;
@@ -799,8 +799,8 @@ function castHeal(sp) {
 function damage(k) {
   const ds = S.level >= 14 ? 2 : S.level >= 8 ? 1 : 0, nd = cantripDice(), radiant = Array(ds).fill(8);
   const t = {
-    mace: [[6, ...radiant], mod('str'), 'Mace damage'], xbow: [[8, ...radiant], mod('dex'), 'Crossbow damage'],
-    thorn: [Array(nd).fill(6), 0, 'Thorn Whip (piercing)'], flame: [Array(nd).fill(8), 0, 'Sacred Flame (radiant)'],
+    club: [[4, ...radiant], mod('str'), 'Club damage'], shill: [[8, ...radiant], mod('wis'), 'Shillelagh damage'], xbow: [[8, ...radiant], mod('dex'), 'Crossbow damage'],
+ flame: [Array(nd).fill(8), 0, 'Sacred Flame (radiant)'],
     toll8: [Array(nd).fill(8), 0, 'Toll the Dead'], toll12: [Array(nd).fill(12), 0, 'Toll the Dead (hurt target)'],
     gbolt: [Array(3 + S.slotSel).fill(6), 0, `Guiding Bolt (slot ${S.slotSel})`],
   }[k];
@@ -898,7 +898,7 @@ function act(el, e) {
       toast(k === 'preserve' ? `Preserve Life: split ${5 * S.level} HP among creatures within 30 ft, none above half its max HP.`
         : `Turn Undead: undead within 30 ft make a Wisdom save, DC ${spellDC()}, or flee for 1 minute.`); break;
     case 'atk': {
-      const t = { mace: ['Mace attack', mod('str')], xbow: ['Crossbow attack', mod('dex')], thorn: ['Thorn Whip attack', mod('wis')] }[k];
+      const t = { club: ['Club attack', mod('str')], xbow: ['Crossbow attack', mod('dex')], shill: ['Shillelagh attack', mod('wis')] }[k];
       return roll({ dice: [20], mod: t[1] + prof(), label: t[0], attack: true });
     }
     case 'gbolt': {
