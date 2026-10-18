@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17121c">
+<title>Brother Lumen</title>
+<style>
+  :root {
+    --bg: #17121c; --card: #241c2b; --line: #3a2f44; --text: #f3e9dc; --dim: #a99bb3;
+    --gold: #e8b14c; --rose: #e07a5f; --green: #6fbf8e; --nav: 58px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 10px; min-height: 40px; cursor: pointer; touch-action: manipulation; }
+  button:active { transform: scale(0.97); }
+  button.primary { background: var(--gold); color: #241a0c; border-color: var(--gold); font-weight: 600; }
+  button:disabled { opacity: 0.4; }
+  input, select, textarea { font: inherit; color: var(--text); background: #1c1622; border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 8px; }
+  input[type=number] { width: 4.2em; text-align: center; }
+  main { padding-bottom: calc(var(--nav) + env(safe-area-inset-bottom)); }
+  .tab { display: none; }
+  .tab.active { display: block; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--nav) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom); display: flex; background: #120e16; border-top: 1px solid var(--line); z-index: 10; }
+  nav button { flex: 1; border: 0; border-radius: 0; background: none; color: var(--dim); font-weight: 600; }
+  nav button.on { color: var(--gold); }
+
+  /* tray */
+  #stage { position: relative; height: 52vh; min-height: 260px; background: #0d0a10; overflow: hidden; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+  #labels { position: absolute; inset: 0; pointer-events: none; }
+  .dl { position: absolute; transform: translate(-50%, 0); background: rgba(0,0,0,0.7); color: #fff;
+    font-weight: 700; padding: 1px 7px; border-radius: 8px; font-size: 16px; }
+  .dl.dropped { color: #888; text-decoration: line-through; }
+  #result { position: absolute; left: 0; right: 0; top: 8px; text-align: center; pointer-events: none;
+    text-shadow: 0 1px 4px #000; }
+  #result .label { color: var(--dim); font-size: 14px; }
+  #result .total { font-size: 40px; font-weight: 800; color: var(--gold); line-height: 1.1; }
+  #result .detail { font-size: 13px; color: var(--text); }
+  #result .note { font-size: 14px; color: var(--rose); font-weight: 700; }
+  .pad { padding: 10px 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .row > button { flex: 1 1 auto; }
+  .chip { min-width: 48px; }
+  .chip .n { color: var(--gold); font-weight: 700; margin-left: 3px; }
+  #log { list-style: none; margin: 0; padding: 0 12px 12px; }
+  #log li { border-top: 1px solid var(--line); padding: 6px 0; display: flex; gap: 8px; }
+  #log .t { font-weight: 800; color: var(--gold); min-width: 2.4em; text-align: right; }
+  #log .d { color: var(--dim); font-size: 13px; }
+
+  /* sheet */
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin: 18px 0 8px; }
+  .sub { color: var(--dim); font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .ab { text-align: center; padding: 8px 4px; }
+  .ab.target { outline: 2px dashed var(--gold); }
+  .ab .name { font-size: 12px; color: var(--dim); text-transform: uppercase; }
+  .ab .mod { font-size: 24px; font-weight: 800; width: 100%; margin: 4px 0; }
+  .ab .tag { font-size: 11px; color: var(--gold); }
+  .stat { text-align: center; }
+  .stat .v { font-size: 20px; font-weight: 800; }
+  .stat .k { font-size: 11px; color: var(--dim); text-transform: uppercase; }
+  .hp { display: flex; align-items: baseline; gap: 8px; justify-content: center; }
+  .hp .cur { font-size: 38px; font-weight: 800; }
+  .slot { width: 30px; height: 30px; min-height: 30px; padding: 0; border-radius: 50%; }
+  .slot.used { background: #4a3a55; border-color: #4a3a55; }
+  .slot.free { background: var(--gold); border-color: var(--gold); }
+  .slot.ok { background: var(--green); border-color: var(--green); }
+  .slot.bad { background: var(--rose); border-color: var(--rose); }
+  .list { display: grid; gap: 4px; }
+  .li { display: flex; align-items: center; gap: 8px; }
+  .li .grow { flex: 1; }
+  .li button.b { min-width: 58px; font-weight: 700; }
+  .spell { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+  .spell small { color: var(--dim); }
+  .sel { outline: 2px solid var(--gold); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; text-align: left; }
+  tr.now td { background: #33283c; }
+  tr.past td { color: var(--dim); }
+  #toast { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav) + 12px + env(safe-area-inset-bottom));
+    background: #3a2f44; border: 1px solid var(--gold); border-radius: 12px; padding: 10px 12px; display: none; z-index: 20; }
+  #banner { background: var(--rose); color: #000; padding: 6px 10px; display: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+} }
+</script>
+</head>
+<body>
+<div id="banner"></div>
+<main>
+  <section id="tab-tray" class="tab active">
+    <div id="stage"><canvas id="c"></canvas><div id="labels"></div><div id="result"></div></div>
+    <div class="pad">
+      <div class="row">
+        <button data-act="quick" data-k="d20">d20</button>
+        <button data-act="quick" data-k="adv">Advantage</button>
+        <button data-act="quick" data-k="dis">Disadvantage</button>
+        <button data-act="quick" data-k="4d6">4d6 drop low</button>
+      </div>
+      <div class="row" style="margin-top:6px" id="builder"></div>
+    </div>
+    <ol id="log"></ol>
+  </section>
+  <section id="tab-sheet" class="tab"><div class="pad" id="sheet"></div></section>
+  <section id="tab-road" class="tab"><div class="pad" id="road"></div></section>
+</main>
+<nav>
+  <button data-act="tab" data-k="tray" class="on">Tray</button>
+  <button data-act="tab" data-k="sheet">Sheet</button>
+  <button data-act="tab" data-k="road">Roadmap</button>
+</nav>
+<div id="toast"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+
+// ---------- rules data (D&D 5e 2014) ----------
+const AB = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+const AB_NAME = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
+const SKILLS = [
+  ['acrobatics', 'Acrobatics', 'dex'], ['animal', 'Animal Handling', 'wis'], ['arcana', 'Arcana', 'int'],
+  ['athletics', 'Athletics', 'str'], ['deception', 'Deception', 'cha'], ['history', 'History', 'int'],
+  ['insight', 'Insight', 'wis'], ['intimidation', 'Intimidation', 'cha'], ['investigation', 'Investigation', 'int'],
+  ['medicine', 'Medicine', 'wis'], ['nature', 'Nature', 'int'], ['perception', 'Perception', 'wis'],
+  ['performance', 'Performance', 'cha'], ['persuasion', 'Persuasion', 'cha'], ['religion', 'Religion', 'int'],
+  ['sleight', 'Sleight of Hand', 'dex'], ['stealth', 'Stealth', 'dex'], ['survival', 'Survival', 'wis'],
+];
+// Full-caster spell slots by level (index = character level).
+const SLOTS = [null, [2], [3], [4, 2], [4, 3], [4, 3, 2], [4, 3, 3], [4, 3, 3, 1], [4, 3, 3, 2], [4, 3, 3, 3, 1],
+  [4, 3, 3, 3, 2], [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1, 1], [4, 3, 3, 3, 2, 1, 1],
+  [4, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 2, 1, 1, 1, 1], [4, 3, 3, 3, 3, 1, 1, 1, 1],
+  [4, 3, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 3, 2, 2, 1, 1]];
+// Healing spells: dice(slot) -> [count, sides]; Disciple of Life adds 2 + slot.
+const HEALS = [
+  { name: 'Healing Word', min: 1, dice: l => [l, 4], note: 'bonus action, 60 ft' },
+  { name: 'Cure Wounds', min: 1, dice: l => [l, 8], note: 'action, touch' },
+  { name: 'Prayer of Healing', min: 2, dice: l => [l, 8], note: '10 minutes, up to 6 creatures' },
+  { name: 'Mass Healing Word', min: 3, dice: l => [l - 2, 4], note: 'bonus action, up to 6 creatures' },
+  { name: 'Mass Cure Wounds', min: 5, dice: l => [l - 2, 8], note: 'action, up to 6 creatures' },
+  { name: 'Heal', min: 6, fixed: l => 70 + 10 * (l - 6), note: 'also ends blindness, deafness, disease' },
+];
+
+// ---------- state ----------
+const KEY = 'brother-lumen-v1';
+const DEFAULT = {
+  v: 1, level: 1, base: { str: null, dex: null, con: null, int: null, wis: null, cha: null },
+  lineage: 'wis', pool: [], skills: ['insight', 'medicine', 'persuasion', 'religion'], saves: ['wis', 'cha'],
+  ac: 18, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, gold: 0, notes: '', log: [],
+  secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator', knows: 'undecided' }],
+};
+let S = load();
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) return { ...structuredClone(DEFAULT), ...s }; } catch (e) {}
+  return structuredClone(DEFAULT);
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
+
+const score = k => S.base[k] == null ? null : S.base[k] + (S.lineage === k ? 2 : 0);
+const mod = k => { const s = score(k); return s == null ? 0 : Math.floor((s - 10) / 2); };
+const prof = () => 2 + Math.floor((S.level - 1) / 4);
+const fmt = n => (n >= 0 ? '+' : '') + n;
+const maxHP = () => Math.max(S.level, 8 + mod('con') + (S.level - 1) * (5 + mod('con')));
+const curHP = () => S.hp.cur == null ? maxHP() : Math.min(S.hp.cur, maxHP());
+const slotsOf = () => SLOTS[S.level];
+const maxSlot = () => slotsOf().length;
+const spellDC = () => 8 + prof() + mod('wis');
+const spellAtk = () => prof() + mod('wis');
+const skillBonus = ([k, , a]) => mod(a) + (S.skills.includes(k) ? prof() : 0);
+const saveBonus = a => mod(a) + (S.saves.includes(a) ? prof() : 0);
+const cantripDice = () => 1 + (S.level >= 5) + (S.level >= 11) + (S.level >= 17);
+const cdMax = () => S.level >= 18 ? 3 : S.level >= 6 ? 2 : S.level >= 2 ? 1 : 0;
+const supreme = () => S.level >= 17;
+const KNOWS = { undecided: 'var(--dim)', nothing: 'var(--green)', suspects: 'var(--gold)', knows: 'var(--rose)' };
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// ---------- dice geometry ----------
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = a => Math.hypot(a[0], a[1], a[2]);
+const scale = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const norm = a => scale(a, 1 / len(a));
+
+function dieVerts(n) {
+  const p = (1 + Math.sqrt(5)) / 2, q = 1 / p, v = [];
+  if (n === 4) return [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]];
+  if (n === 6) { for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) v.push([x, y, z]); return v; }
+  if (n === 8) return [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  if (n === 10) {
+    const c = Math.cos(Math.PI / 5), t = (1 - c) / (1 + c);
+    v.push([0, 1, 0], [0, -1, 0]);
+    for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5; v.push([Math.cos(a), k % 2 ? -t : t, Math.sin(a)]); }
+    return v;
+  }
+  if (n === 12) {
+    for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) v.push([x, y, z]);
+    for (const a of [-1, 1]) for (const b of [-1, 1]) v.push([0, a * q, b * p], [a * q, b * p, 0], [a * p, 0, b * q]);
+    return v;
+  }
+  if (n === 20) {
+    for (const a of [-1, 1]) for (const b of [-1, 1]) v.push([0, a, b * p], [a, b * p, 0], [a * p, 0, b]);
+    return v;
+  }
+}
+
+// Faces from vertices: planes through vertex triples with every vertex on one side.
+function buildFaces(V) {
+  const faces = [], eps = 1e-5;
+  for (let i = 0; i < V.length; i++) for (let j = i + 1; j < V.length; j++) for (let k = j + 1; k < V.length; k++) {
+    let n = cross(sub(V[j], V[i]), sub(V[k], V[i]));
+    if (len(n) < 1e-9) continue;
+    n = norm(n); let d = dot(n, V[i]), pos = 0, neg = 0;
+    for (const v of V) { const s = dot(n, v) - d; if (s > eps) pos++; else if (s < -eps) neg++; }
+    if (pos && neg) continue;
+    if (pos) { n = scale(n, -1); d = -d; }
+    if (faces.some(f => dot(f.n, n) > 1 - eps)) continue;
+    const idx = V.map((v, m) => m).filter(m => Math.abs(dot(n, V[m]) - d) < eps);
+    const c = scale(idx.reduce((s, m) => [s[0] + V[m][0], s[1] + V[m][1], s[2] + V[m][2]], [0, 0, 0]), 1 / idx.length);
+    const u = norm(sub(V[idx[0]], c)), w = cross(n, u);
+    const ang = m => { const r = sub(V[m], c); return Math.atan2(dot(r, w), dot(r, u)); };
+    idx.sort((a, b) => ang(a) - ang(b)); // counter-clockwise seen from outside
+    faces.push({ n, idx, c, u, w });
+  }
+  return faces;
+}
+
+const DIE_SIZE = { 4: 1.3, 6: 1.1, 8: 1.15, 10: 1.1, 12: 1.15, 20: 1.2 };
+const DIE_COLOR = { 4: '#2f7d6d', 6: '#a8443a', 8: '#3b5ba5', 10: '#7a4aa0', 12: '#2f6f8f', 20: '#b8862b' };
+
+function makeDef(sides) {
+  let V = dieVerts(sides);
+  const r = Math.max(...V.map(len));
+  V = V.map(v => scale(v, DIE_SIZE[sides] / r));
+  const faces = buildFaces(V);
+  // Values: opposite faces sum to sides + 1; d4 has no opposite faces.
+  const values = new Array(faces.length).fill(0);
+  if (sides === 4) faces.forEach((f, i) => values[i] = i + 1);
+  else {
+    let p = 0;
+    faces.forEach((f, i) => {
+      if (values[i]) return;
+      const j = faces.findIndex((g, m) => m !== i && !values[m] && dot(f.n, g.n) < -1 + 1e-5);
+      values[i] = p + 1; values[j] = sides - p; p++;
+    });
+  }
+  // d4: each corner shows the value of the face opposite that corner.
+  const cornerVal = {};
+  if (sides === 4) V.forEach((v, m) => { cornerVal[m] = values[faces.findIndex(f => !f.idx.includes(m))]; });
+  // UVs: each face in its own 2D basis, one scale per die.
+  const maxD = Math.max(...faces.flatMap(f => f.idx.map(m => len(sub(V[m], f.c)))));
+  const s = 0.48 / maxD;
+  for (const f of faces) {
+    f.uvs = f.idx.map(m => { const r = sub(V[m], f.c); return [dot(r, f.u) * s + 0.5, dot(r, f.w) * s + 0.5]; });
+    f.inr = Math.min(...f.uvs.map((a, k) => {
+      const b = f.uvs[(k + 1) % f.uvs.length], ex = b[0] - a[0], ey = b[1] - a[1];
+      return Math.abs(ex * (0.5 - a[1]) - ey * (0.5 - a[0])) / Math.hypot(ex, ey);
+    }));
+  }
+  return { sides, V, faces, values, cornerVal };
+}
+
+function faceTexture(def, fi) {
+  const S2 = 256, cv = document.createElement('canvas'); cv.width = cv.height = S2;
+  const g = cv.getContext('2d'), f = def.faces[fi];
+  g.fillStyle = DIE_COLOR[def.sides]; g.fillRect(0, 0, S2, S2);
+  g.fillStyle = '#fff8e7'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (def.sides === 4) {
+    f.uvs.forEach((uv, k) => {
+      const du = uv[0] - 0.5, dv = uv[1] - 0.5;
+      g.save(); g.translate((0.5 + du * 0.6) * S2, (1 - (0.5 + dv * 0.6)) * S2); g.rotate(Math.atan2(du, dv));
+      g.font = `bold ${Math.round(f.inr * S2 * 0.8)}px system-ui, sans-serif`;
+      g.fillText(String(def.cornerVal[f.idx[k]]), 0, 0); g.restore();
+    });
+  } else {
+    const val = def.values[fi], txt = def.sides === 10 && val === 10 ? '0' : String(val);
+    const fs = Math.round(f.inr * S2 * (txt.length > 1 ? 1.0 : 1.25));
+    g.font = `bold ${fs}px system-ui, sans-serif`;
+    g.fillText(txt, S2 / 2, S2 / 2);
+    if (def.sides >= 8 && (txt === '6' || txt === '9')) g.fillRect(S2 / 2 - fs * 0.22, S2 / 2 + fs * 0.42, fs * 0.44, fs * 0.07);
+  }
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  return tex;
+}
+
+const DEFS = {};
+for (const n of [4, 6, 8, 10, 12, 20]) DEFS[n] = makeDef(n);
+const ASSETS = {};
+function assets(sides) {
+  if (ASSETS[sides]) return ASSETS[sides];
+  const def = DEFS[sides], pos = [], nor = [], uv = [], geo = new THREE.BufferGeometry();
+  def.faces.forEach((f, fi) => {
+    const start = pos.length / 3;
+    for (let k = 1; k < f.idx.length - 1; k++) for (const t of [0, k, k + 1]) {
+      pos.push(...def.V[f.idx[t]]); nor.push(...f.n); uv.push(...f.uvs[t]);
+    }
+    geo.addGroup(start, pos.length / 3 - start, fi);
+  });
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  const mats = def.faces.map((f, fi) => new THREE.MeshStandardMaterial({ map: faceTexture(def, fi), roughness: 0.45, metalness: 0.05 }));
+  const edges = new THREE.EdgesGeometry(geo, 10);
+  const shape = new CANNON.ConvexPolyhedron({ vertices: def.V.map(v => new CANNON.Vec3(...v)), faces: def.faces.map(f => f.idx) });
+  return ASSETS[sides] = { geo, mats, edges, shape };
+}
+
+// ---------- tray ----------
+const canvas = document.getElementById('c'), stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0d0a10');
+const CAM_Y = 20;
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+camera.position.set(0, CAM_Y, 0); camera.up.set(0, 0, -1); camera.lookAt(0, 0, 0);
+scene.add(new THREE.HemisphereLight('#fff4e0', '#302040', 1.1));
+const sun = new THREE.DirectionalLight('#ffe8c0', 1.8);
+sun.position.set(-4, 14, 6); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 });
+scene.add(sun);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: '#2a1f33', roughness: 1 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -40, 0) });
+const diceMat = new CANNON.Material('dice'), wallMat = new CANNON.Material('wall');
+world.addContactMaterial(new CANNON.ContactMaterial(diceMat, wallMat, { friction: 0.3, restitution: 0.4 }));
+world.addContactMaterial(new CANNON.ContactMaterial(diceMat, diceMat, { friction: 0.2, restitution: 0.3 }));
+const plane = (rx, ry) => {
+  const b = new CANNON.Body({ mass: 0, material: wallMat, shape: new CANNON.Plane() });
+  b.quaternion.setFromEuler(rx, ry, 0); world.addBody(b); return b;
+};
+const H = Math.PI / 2;
+const walls = { floor: plane(-H, 0), ceil: plane(H, 0), xl: plane(0, H), xr: plane(0, -H), zf: plane(0, 0), zb: plane(0, Math.PI) };
+walls.ceil.position.set(0, 9, 0);
+let halfX = 5, halfZ = 5;
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  halfZ = CAM_Y * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 0.9; halfX = halfZ * camera.aspect;
+  walls.xl.position.set(-halfX, 0, 0); walls.xr.position.set(halfX, 0, 0);
+  walls.zf.position.set(0, 0, -halfZ); walls.zb.position.set(0, 0, halfZ);
+  placeLabels(); renderer.render(scene, camera);
+}
+addEventListener('resize', resize);
+
+let dice = [], rolling = null, queue = [];
+function clearDice() {
+  for (const d of dice) { scene.remove(d.mesh); world.removeBody(d.body); }
+  dice = []; document.getElementById('labels').innerHTML = '';
+}
+
+function spawn(sidesList) {
+  clearDice();
+  const tall = halfZ > halfX, across = tall ? halfX : halfZ, along = tall ? halfZ : halfX;
+  const perRow = Math.max(1, Math.floor((2 * across - 1.5) / 1.6));
+  sidesList.forEach((sides, i) => {
+    const a = assets(sides);
+    const mesh = new THREE.Group();
+    const solid = new THREE.Mesh(a.geo, a.mats); solid.castShadow = true;
+    mesh.add(solid, new THREE.LineSegments(a.edges, new THREE.LineBasicMaterial({ color: '#000', transparent: true, opacity: 0.35 })));
+    scene.add(mesh);
+    const body = new CANNON.Body({ mass: 1, material: diceMat, shape: a.shape, linearDamping: 0.1, angularDamping: 0.1 });
+    const row = Math.floor(i / perRow), col = i % perRow, n = Math.min(perRow, sidesList.length - row * perRow);
+    const off = (col - (n - 1) / 2) * 1.6, back = along - 1.3 - row * 1.6;
+    const sp = 14 + Math.random() * 6, lat = (Math.random() - 0.5) * 6;
+    if (tall) { body.position.set(off, 2 + Math.random(), back); body.velocity.set(lat, 1, -sp); }
+    else { body.position.set(-back, 2 + Math.random(), off); body.velocity.set(sp, 1, lat); }
+    body.quaternion.setFromEuler(Math.random() * 6.3, Math.random() * 6.3, Math.random() * 6.3);
+    body.angularVelocity.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40);
+    world.addBody(body);
+    dice.push({ sides, mesh, solid, body, nudges: 0 });
+  });
+}
+
+// The face most aligned with up wins; a d4 is read by the face pointing down.
+function readDie(d) {
+  const def = DEFS[d.sides], target = d.sides === 4 ? -1 : 1;
+  let best = -2, bi = 0;
+  def.faces.forEach((f, i) => {
+    const n = d.body.quaternion.vmult(new CANNON.Vec3(...f.n));
+    if (n.y * target > best) { best = n.y * target; bi = i; }
+  });
+  return { value: def.values[bi], align: best };
+}
+
+function roll(opts) {
+  queue.push(opts);
+  showTab('tray');
+  if (!rolling) next();
+}
+function next() {
+  const opts = queue.shift();
+  if (!opts) { rolling = null; return; }
+  resize();
+  spawn(opts.dice);
+  document.getElementById('result').innerHTML = `<div class="label">${opts.label || 'Roll'}</div>`;
+  rolling = { opts, simT: 0, still: 0, last: performance.now() };
+  requestAnimationFrame(tick);
+}
+function tick(now) {
+  if (!rolling) return;
+  const dt = Math.min(0.1, (now - rolling.last) / 1000); rolling.last = now;
+  world.step(1 / 60, dt, 6); rolling.simT += dt;
+  for (const d of dice) { d.mesh.position.copy(d.body.position); d.mesh.quaternion.copy(d.body.quaternion); }
+  renderer.render(scene, camera);
+  const calm = dice.every(d => d.body.velocity.length() < 0.3 && d.body.angularVelocity.length() < 0.5);
+  rolling.still = calm ? rolling.still + 1 : 0;
+  const timeout = rolling.simT > 8; // simulated seconds, so a slow device still settles
+  if (rolling.still >= 15 || timeout) {
+    const cocked = dice.filter(d => readDie(d).align < 0.9 && d.nudges < 3);
+    if (cocked.length && !timeout) {
+      for (const d of cocked) { d.nudges++; d.body.applyImpulse(new CANNON.Vec3((Math.random() - 0.5) * 2, 4, (Math.random() - 0.5) * 2)); }
+      rolling.still = 0;
+    } else return finish();
+  }
+  requestAnimationFrame(tick);
+}
+
+function finish() {
+  const { opts } = rolling;
+  const reads = dice.map(readDie), vals = reads.map(r => r.value);
+  window.lastRoll = dice.map((d, i) => ({ sides: d.sides, ...reads[i], simT: rolling.simT }));
+  const keep = opts.keep || 'all', order = vals.map((v, i) => i).sort((a, b) => vals[a] - vals[b]);
+  const dropped = new Set();
+  if (keep === 'dl1') dropped.add(order[0]);
+  if (keep === 'kh1') order.slice(0, -1).forEach(i => dropped.add(i));
+  if (keep === 'kl1') order.slice(1).forEach(i => dropped.add(i));
+  dice.forEach((d, i) => {
+    d.value = vals[i]; d.dropped = dropped.has(i);
+    if (d.dropped) d.solid.material = d.solid.material.map(m => { const c = m.clone(); c.color.set('#666'); return c; });
+  });
+  renderer.render(scene, camera);
+  placeLabels();
+  const kept = vals.filter((v, i) => !dropped.has(i)), m = opts.mod || 0;
+  const total = kept.reduce((a, b) => a + b, 0) + m;
+  const parts = vals.map((v, i) => dropped.has(i) ? `<s>${v}</s>` : v).join(', ');
+  const nat = opts.dice.length && opts.dice.every(s => s === 20) ? kept[0] : null;
+  const detail = `[${parts}]${m ? ' ' + fmt(m).replace(/^([+-])/, '$1 ') : ''}${opts.why ? ' ' + opts.why : ''}`;
+  let note = '';
+  if (opts.attack && nat === 20) note = 'Critical hit! Roll the damage dice twice.';
+  if (opts.attack && nat === 1) note = 'Natural 1: a miss.';
+  rolling = null;
+  const extra = opts.onDone ? opts.onDone(total, { vals, kept, nat }) : null;
+  showResult(opts.label || 'Roll', total, detail, extra || note);
+  next();
+}
+
+function showResult(label, total, detail, note) {
+  document.getElementById('result').innerHTML = `<div class="label">${label}</div><div class="total">${total}</div>` +
+    `<div class="detail">${detail}</div>${note ? `<div class="note">${note}</div>` : ''}`;
+  S.log.unshift({ label, total, detail: detail.replace(/<\/?s>/g, '~') });
+  S.log = S.log.slice(0, 20); save(); renderLog();
+}
+
+function placeLabels() {
+  const box = document.getElementById('labels');
+  box.innerHTML = '';
+  const w = stage.clientWidth, h = stage.clientHeight;
+  for (const d of dice) {
+    if (d.value == null) continue;
+    const v = new THREE.Vector3(d.body.position.x, d.body.position.y, d.body.position.z).project(camera);
+    const el = document.createElement('div');
+    el.className = 'dl' + (d.dropped ? ' dropped' : '');
+    const below = new THREE.Vector3(d.body.position.x, d.body.position.y, d.body.position.z + DIE_SIZE[d.sides] * 1.1).project(camera);
+    el.style.left = ((v.x + 1) / 2 * w) + 'px'; el.style.top = ((1 - below.y) / 2 * h) + 'px';
+    el.textContent = d.value; box.appendChild(el);
+  }
+}
+
+function renderLog() {
+  document.getElementById('log').innerHTML = S.log.map(e =>
+    `<li><span class="t">${e.total}</span><span><div>${e.label}</div><div class="d">${e.detail}</div></span></li>`).join('');
+}
+
+// ---------- dice builder ----------
+const builder = { dice: {}, mod: 0 };
+function renderBuilder() {
+  const el = document.getElementById('builder');
+  el.innerHTML = [4, 6, 8, 10, 12, 20].map(n =>
+    `<button class="chip" data-act="b-add" data-k="${n}">d${n}${builder.dice[n] ? `<span class="n">×${builder.dice[n]}</span>` : ''}</button>`).join('') +
+    `<button data-act="b-mod" data-k="-1">−</button><span style="min-width:2.5em;text-align:center">${fmt(builder.mod)}</span>` +
+    `<button data-act="b-mod" data-k="1">+</button><button data-act="b-clear">Clear</button><button class="primary" data-act="b-roll">Roll</button>`;
+}
+
+// ---------- sheet ----------
+let poolPick = null, resetArmed = false;
+function toast(msg) {
+  const t = document.getElementById('toast'); t.innerHTML = msg; t.style.display = 'block';
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 4500);
+}
+
+function renderSheet() {
+  const L = S.level, slots = slotsOf();
+  S.slotSel = Math.min(Math.max(1, S.slotSel), maxSlot());
+  const ab = AB.map(k => `
+    <div class="card ab ${poolPick != null ? 'target' : ''}" data-act="ab-assign" data-k="${k}">
+      <div class="name">${AB_NAME[k]}</div>
+      <button class="mod" data-act="check" data-k="${k}">${score(k) == null ? '--' : fmt(mod(k))}</button>
+      <input type="number" min="1" max="20" data-field="base" data-k="${k}" value="${S.base[k] ?? ''}" placeholder="--">
+      <div class="tag">${S.lineage === k ? '+2 lineage = ' + (score(k) ?? '--') : '&nbsp;'}</div>
+    </div>`).join('');
+  const pool = S.pool.map((v, i) => `<button class="chip ${poolPick === i ? 'sel' : ''}" data-act="pool-pick" data-k="${i}">${v}</button>`).join('');
+  const cur = curHP();
+  const slotRows = slots.map((n, li) => `<div class="li"><span style="width:4.5em">Level ${li + 1}</span>` +
+    Array.from({ length: n }, (_, i) => `<button class="slot ${i < S.slotsUsed[li] ? 'used' : 'free'}" data-act="slot" data-k="${li}" data-i="${i}" aria-label="slot"></button>`).join('') + '</div>').join('');
+  const slotSel = slots.map((n, li) => `<button class="chip ${S.slotSel === li + 1 ? 'sel' : ''}" data-act="slotsel" data-k="${li + 1}">${li + 1}${n - S.slotsUsed[li] ? '' : ' (none)'}</button>`).join('');
+  const heals = HEALS.filter(sp => sp.min <= maxSlot()).map((sp, i) => {
+    const l = Math.max(sp.min, S.slotSel);
+    const life = 2 + l, bonus = sp.fixed ? 0 : mod('wis');
+    const what = sp.fixed ? `${sp.fixed(l) + life} HP` : `${sp.dice(l)[0]}d${sp.dice(l)[1]} ${fmt(bonus + life)}`;
+    return `<button class="spell" data-act="heal" data-k="${HEALS.indexOf(sp)}"><b>${sp.name}</b><small>slot ${l}: ${what}${supreme() && !sp.fixed ? ' (max dice)' : ''} · ${sp.note}</small></button>`;
+  }).join('');
+  const cd = cdMax();
+  const nd = cantripDice(), ds = S.level >= 14 ? 2 : S.level >= 8 ? 1 : 0;
+  const atks = [
+    ['mace', 'Mace', prof() + mod('str'), `1d6 ${fmt(mod('str'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'bludgeoning'],
+    ['xbow', 'Light crossbow', prof() + mod('dex'), `1d8 ${fmt(mod('dex'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'piercing, 80/320 ft'],
+    ['shill', 'Shillelagh', prof() + mod('wis'), `1d8 ${fmt(mod('wis'))}${ds ? ` + ${ds}d8 radiant` : ''}`, 'club or quarterstaff only; bonus action to cast'],
+  ].map(([k, n, hit, dmg, note]) => `<div class="li"><span class="grow"><b>${n}</b><br><span class="sub">${dmg} · ${note}</span></span>
+      <button class="b" data-act="atk" data-k="${k}">${fmt(hit)}</button><button class="b" data-act="dmg" data-k="${k}">Dmg</button></div>`).join('');
+  const gbL = S.slotSel;
+
+  document.getElementById('sheet').innerHTML = `
+    <div class="li"><div class="grow"><h1>Brother Lumen</h1><div class="sub">Life cleric of Lathander · Custom Lineage · Acolyte</div></div>
+      <button data-act="lvl" data-k="-1">−</button><div class="stat"><div class="v">${L}</div><div class="k">level</div></div><button data-act="lvl" data-k="1">+</button></div>
+
+    <h2>Abilities</h2>
+    <div class="row" style="margin-bottom:8px">
+      <button data-act="pool-roll">Roll stats (4d6 drop lowest ×6)</button>
+      <label class="sub">+2 goes to <select data-field="lineage">${AB.map(k => `<option value="${k}" ${S.lineage === k ? 'selected' : ''}>${AB_NAME[k]}</option>`).join('')}</select></label>
+    </div>
+    ${S.pool.length ? `<div class="row" style="margin-bottom:8px"><span class="sub">${poolPick == null ? 'Tap a number, then an ability:' : 'Now tap an ability:'}</span>${pool}</div>` : ''}
+    <div class="grid3">${ab}</div>
+    <div class="sub" style="margin-top:4px">Big button: roll a check. Box: the rolled score before the +2.</div>
+
+    <h2>Combat</h2>
+    <div class="grid3">
+      <div class="card stat"><input type="number" data-field="ac" value="${S.ac}" style="font-size:20px;font-weight:800;width:3em"><div class="k">armor class</div></div>
+      <button class="card stat" data-act="init"><div class="v">${fmt(mod('dex'))}</div><div class="k">initiative</div></button>
+      <div class="card stat"><div class="v">30</div><div class="k">speed ft</div></div>
+      <div class="card stat"><div class="v">${fmt(prof())}</div><div class="k">proficiency</div></div>
+      <div class="card stat"><div class="v">${spellDC()}</div><div class="k">spell save DC</div></div>
+      <div class="card stat"><div class="v">${fmt(spellAtk())}</div><div class="k">spell attack</div></div>
+    </div>
+    <div class="sub" style="margin-top:4px">Darkvision 60 ft · passive Perception ${10 + skillBonus(SKILLS[11])}</div>
+
+    <h2>Hit points</h2>
+    <div class="card">
+      <div class="hp"><span class="cur">${cur}</span><span class="sub">/ ${maxHP()}</span>${S.hp.temp ? `<span style="color:var(--green)">+${S.hp.temp} temp</span>` : ''}</div>
+      <div class="row" style="margin-top:6px">
+        <input type="number" id="hpAmt" min="0" placeholder="0" inputmode="numeric">
+        <button data-act="dmg-take" style="color:var(--rose)">Damage</button>
+        <button data-act="heal-take" style="color:var(--green)">Heal</button>
+        <button data-act="temp-take">Temp HP</button>
+      </div>
+      ${cur === 0 ? `<div class="li" style="margin-top:8px"><span class="grow">Death saves: <b style="color:var(--green)">${'●'.repeat(S.deathS)}${'○'.repeat(3 - S.deathS)}</b>
+        <b style="color:var(--rose)">${'●'.repeat(S.deathF)}${'○'.repeat(3 - S.deathF)}</b></span><button data-act="death">Roll death save</button></div>` : ''}
+      <div class="li" style="margin-top:8px"><span class="grow">Hit dice: ${L - S.hdUsed} / ${L} d8</span>
+        <button data-act="hd" ${L - S.hdUsed ? '' : 'disabled'}>Spend one</button></div>
+    </div>
+    <div class="row" style="margin-top:8px"><button data-act="short">Short rest</button><button data-act="long">Long rest</button></div>
+
+    <h2>Spell slots</h2>
+    <div class="card list">${slotRows}</div>
+
+    <h2>Healing</h2>
+    <div class="row" style="margin-bottom:6px"><span class="sub">Cast with slot:</span>${slotSel}</div>
+    <div class="list">${heals}</div>
+    <div class="sub" style="margin:6px 0">Disciple of Life adds 2 + slot level to every healing spell.${L >= 6 ? ' Blessed Healer: healing someone else heals you 2 + slot level.' : ''}</div>
+    <div class="card list">
+      <div class="li"><span class="grow"><b>Goodberry</b> (feat, once per long rest)<br><span class="sub">${S.berries} berries · each heals 4 · gone after 24 hours</span></span>
+        <button data-act="gb-cast" ${S.goodberryCast ? 'disabled' : ''}>Cast</button></div>
+      <div class="row"><button data-act="gb-feed" ${S.berries ? '' : 'disabled'}>Give a berry</button><button data-act="gb-eat" ${S.berries ? '' : 'disabled'}>Eat one (+4 me)</button></div>
+      ${cd ? `<div class="li"><span class="grow"><b>Channel Divinity</b> ${cd - S.cdUsed} / ${cd} left<br><span class="sub">back on a short rest</span></span></div>
+      <div class="row"><button data-act="cd" data-k="preserve" ${cd - S.cdUsed ? '' : 'disabled'}>Preserve Life (${5 * L} HP)</button>
+        <button data-act="cd" data-k="turn" ${cd - S.cdUsed ? '' : 'disabled'}>Turn Undead</button></div>` : ''}
+    </div>
+
+    <h2>Attacks</h2>
+    <div class="card list">${atks}
+      <div class="li"><span class="grow"><b>Sacred Flame</b><br><span class="sub">${nd}d8 radiant · Dex save DC ${spellDC()} · 60 ft</span></span>
+        <button class="b" data-act="dmg" data-k="flame">Dmg</button></div>
+      <div class="li"><span class="grow"><b>Toll the Dead</b><br><span class="sub">${nd}d8, or ${nd}d12 if hurt · Wis save DC ${spellDC()} · 60 ft</span></span>
+        <button class="b" data-act="dmg" data-k="toll8">d8</button><button class="b" data-act="dmg" data-k="toll12">d12</button></div>
+      <div class="li"><span class="grow"><b>Guiding Bolt</b> (slot ${gbL})<br><span class="sub">${3 + gbL}d6 radiant · next attack on it has advantage</span></span>
+        <button class="b" data-act="gbolt">${fmt(spellAtk())}</button><button class="b" data-act="dmg" data-k="gbolt">Dmg</button></div>
+    </div>
+
+    <h2>Saving throws</h2>
+    <div class="card list">${AB.map(a => `<div class="li"><span class="grow">${S.saves.includes(a) ? '● ' : '○ '}${AB_NAME[a]}</span>
+      <button class="b" data-act="save" data-k="${a}">${fmt(saveBonus(a))}</button></div>`).join('')}</div>
+
+    <h2>Skills</h2>
+    <div class="card list">${SKILLS.map(s => `<div class="li"><input type="checkbox" data-field="skill" data-k="${s[0]}" ${S.skills.includes(s[0]) ? 'checked' : ''}>
+      <span class="grow">${s[1]} <span class="sub">${s[2]}</span></span><button class="b" data-act="skill" data-k="${s[0]}">${fmt(skillBonus(s))}</button></div>`).join('')}</div>
+
+    <h2>Backstory</h2>
+    <div class="card sub" style="color:var(--text)">Raised in Lathander's dawn temple beside the village of Koidu. The capital, Dööm,
+      has since swallowed both. The kingdom hunts rogue mages, so Lumen hides what he can do, the powerful things most of all.</div>
+
+    <h2>Who knows about his magic</h2>
+    <div class="card list">${S.secrets.map((x, i) => `<div class="li"><span class="grow"><b>${esc(x.name)}</b><br><span class="sub">${esc(x.note)}</span></span>
+        <button data-act="sec-cycle" data-k="${i}" style="min-width:7.5em;color:${KNOWS[x.knows]}">${x.knows}</button>
+        <button data-act="sec-del" data-k="${i}" aria-label="remove">×</button></div>`).join('') || '<span class="sub">Nobody listed.</span>'}
+      <div class="row"><input id="secName" placeholder="Name" style="flex:1 1 6em"><input id="secNote" placeholder="Who they are" style="flex:2 1 9em">
+        <button data-act="sec-add">Add</button></div>
+      <div class="sub">Tap the status to change it: undecided, nothing, suspects, knows.</div>
+    </div>
+
+    <h2>Gold and notes</h2>
+    <div class="card">
+      <div class="li"><span class="grow">Gold pieces</span><input type="number" data-field="gold" value="${S.gold}" style="width:6em"></div>
+      <div class="sub" style="margin:4px 0">Revivify needs 300 gp of diamonds per cast.</div>
+      <textarea id="notes" rows="6" style="width:100%"></textarea>
+    </div>
+
+    <h2>Data</h2>
+    <div class="row"><button data-act="export">Export</button><button data-act="import">Import</button>
+      <button data-act="reset" style="color:var(--rose)">${resetArmed ? 'Tap again to reset' : 'Reset sheet'}</button></div>
+    <input type="file" id="importFile" accept="application/json" hidden>
+    <div class="sub" style="margin:8px 0 20px">Saved on this device automatically. Export to move it to another one.</div>`;
+  document.getElementById('notes').value = S.notes;
+}
+
+function renderRoad() {
+  const rows = [
+    [1, '<b>Disciple of Life</b>; heavy armor; Bless, Cure Wounds', 'Every healing spell heals +2 + spell level'],
+    [2, '<b>Channel Divinity: Preserve Life</b>', 'Split 5 × level HP among allies within 30 ft (up to half their max)'],
+    [3, 'Prayer of Healing, Lesser Restoration; Spiritual Weapon', 'Heal 6 after a fight; cure disease, poison, blindness'],
+    [4, 'Ability increase: <b>Wisdom +2</b>', 'Wisdom adds to most heals'],
+    [5, 'Mass Healing Word; Revivify, Beacon of Hope', 'Heal 6 mid-fight; bring back the just-dead (300 gp diamonds)'],
+    [6, '<b>Blessed Healer</b>', 'Healing others heals you 2 + spell level'],
+    [7, 'Death Ward, Guardian of Faith', 'An ally who would drop to 0 drops to 1'],
+    [8, 'Wisdom to 20; <b>Divine Strike</b>', '+1d8 radiant on weapon hits'],
+    [9, 'Mass Cure Wounds, Raise Dead', 'Big group heal; raise the long-dead'],
+    [11, 'Heal', '70 HP in one spell (+8 from Disciple of Life)'],
+    [12, 'Ability increase', 'War Caster or Resilient (Con) for concentration'],
+    [16, 'Ability increase', ''],
+    [17, '<b>Supreme Healing</b>', 'Healing dice always count as their highest number'],
+    [19, 'Ability increase', ''],
+  ];
+  const nowRow = rows.findIndex(r => r[0] > S.level);
+  document.getElementById('road').innerHTML = `<h1>Road to ultimate healer</h1>
+    <div class="sub">Life cleric all the way. Checked against the free rules (SRD 5.1).</div>
+    <table><tr><th>Lvl</th><th>What arrives</th><th>Why it matters</th></tr>
+    ${rows.map((r, i) => `<tr class="${i === nowRow ? 'now' : r[0] <= S.level ? 'past' : ''}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</table>
+    <h2>Ask the GM first</h2>
+    <div class="sub">Tasha's optional rules, not in the free rules; from memory, unchecked.</div>
+    <ul><li><b>Harness Divine Power</b> (level 2): Channel Divinity for a spell slot.</li>
+    <li><b>Aura of Vitality</b> (level 5): 2d6 healing as a bonus action every turn for a minute. Does Disciple of Life add to every tick?</li>
+    <li><b>Power Word Heal</b> (level 17): full heal.</li></ul>`;
+}
+
+function renderAll() { renderSheet(); renderRoad(); renderBuilder(); renderLog(); }
+
+function showTab(k) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + k));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  if (k === 'tray') resize();
+}
+
+// ---------- actions ----------
+function hpChange(kind, n) {
+  if (!(n > 0)) return toast('Type an amount first.');
+  let cur = curHP();
+  if (kind === 'dmg') {
+    const fromTemp = Math.min(S.hp.temp, n); S.hp.temp -= fromTemp; cur = Math.max(0, cur - (n - fromTemp));
+  } else if (kind === 'heal') { cur = Math.min(maxHP(), cur + n); if (cur > 0) S.deathS = S.deathF = 0; }
+  else S.hp.temp = Math.max(S.hp.temp, n);
+  S.hp.cur = cur;
+}
+
+function castHeal(sp) {
+  const l = Math.max(sp.min, S.slotSel);
+  if (S.slotsUsed[l - 1] >= slotsOf()[l - 1]) return toast(`No level ${l} slots left.`);
+  S.slotsUsed[l - 1]++;
+  const life = 2 + l, label = `${sp.name} (slot ${l})`;
+  const note = S.level >= 6 ? `Blessed Healer: if it was someone else, you heal ${life}.` : '';
+  if (sp.fixed) return showResult(label, sp.fixed(l) + life, `${sp.fixed(l)} + ${life} Disciple of Life`, note);
+  const [cnt, sides] = sp.dice(l), m = mod('wis') + life;
+  if (supreme()) return showResult(label, cnt * sides + m, `${cnt}d${sides} at max = ${cnt * sides} ${fmt(m)} (Wis + Disciple of Life)`, note);
+  roll({ dice: Array(cnt).fill(sides), mod: m, label, why: '(Wis + Disciple of Life)', onDone: () => note });
+}
+
+function damage(k) {
+  const ds = S.level >= 14 ? 2 : S.level >= 8 ? 1 : 0, nd = cantripDice(), radiant = Array(ds).fill(8);
+  const t = {
+    mace: [[6, ...radiant], mod('str'), 'Mace damage'], xbow: [[8, ...radiant], mod('dex'), 'Crossbow damage'],
+    shill: [[8, ...radiant], mod('wis'), 'Shillelagh damage'], flame: [Array(nd).fill(8), 0, 'Sacred Flame (radiant)'],
+    toll8: [Array(nd).fill(8), 0, 'Toll the Dead'], toll12: [Array(nd).fill(12), 0, 'Toll the Dead (hurt target)'],
+    gbolt: [Array(3 + S.slotSel).fill(6), 0, `Guiding Bolt (slot ${S.slotSel})`],
+  }[k];
+  roll({ dice: t[0], mod: t[1], label: t[2] });
+}
+
+function act(el, e) {
+  const a = el.dataset.act, k = el.dataset.k;
+  switch (a) {
+    case 'tab': return showTab(k);
+    case 'quick':
+      if (k === 'd20') roll({ dice: [20], label: 'd20' });
+      if (k === 'adv') roll({ dice: [20, 20], keep: 'kh1', label: 'Advantage' });
+      if (k === 'dis') roll({ dice: [20, 20], keep: 'kl1', label: 'Disadvantage' });
+      if (k === '4d6') roll({ dice: [6, 6, 6, 6], keep: 'dl1', label: '4d6 drop lowest' });
+      return;
+    case 'b-add': {
+      const total = Object.values(builder.dice).reduce((x, y) => x + y, 0);
+      if (total >= 12) return toast('Twelve dice at most.');
+      builder.dice[k] = (builder.dice[k] || 0) + 1; return renderBuilder();
+    }
+    case 'b-mod': builder.mod += +k; return renderBuilder();
+    case 'b-clear': builder.dice = {}; builder.mod = 0; return renderBuilder();
+    case 'b-roll': {
+      const list = Object.entries(builder.dice).flatMap(([n, c]) => Array(c).fill(+n));
+      if (!list.length) return toast('Tap some dice first.');
+      const name = Object.entries(builder.dice).map(([n, c]) => `${c}d${n}`).join(' + ') + (builder.mod ? ' ' + fmt(builder.mod) : '');
+      return roll({ dice: list, mod: builder.mod, label: name });
+    }
+    case 'lvl': S.level = Math.min(20, Math.max(1, S.level + +k)); S.hdUsed = Math.min(S.hdUsed, S.level); break;
+    case 'pool-roll':
+      if (S.pool.length + 6 > 12) return toast('Place the rolled numbers first.');
+      for (let i = 0; i < 6; i++) roll({ dice: [6, 6, 6, 6], keep: 'dl1', label: `Ability roll ${i + 1} of 6`,
+        onDone: t => { S.pool.push(t); save(); renderSheet(); } });
+      return;
+    case 'pool-pick': poolPick = poolPick === +k ? null : +k; break;
+    case 'ab-assign':
+      if (poolPick == null || e.target.closest('input')) return;
+      if (S.base[k] != null) S.pool.push(S.base[k]);
+      S.base[k] = S.pool.splice(poolPick, 1)[0]; poolPick = null; break;
+    case 'check':
+      if (poolPick != null) { el.closest('[data-act=ab-assign]') && act(el.closest('[data-act=ab-assign]'), e); return; }
+      return roll({ dice: [20], mod: mod(k), label: `${AB_NAME[k]} check` });
+    case 'init': return roll({ dice: [20], mod: mod('dex'), label: 'Initiative' });
+    case 'save': return roll({ dice: [20], mod: saveBonus(k), label: `${AB_NAME[k]} save` });
+    case 'skill': { const s = SKILLS.find(x => x[0] === k); return roll({ dice: [20], mod: skillBonus(s), label: s[1] }); }
+    case 'dmg-take': case 'heal-take': case 'temp-take':
+      hpChange(a.split('-')[0], +document.getElementById('hpAmt').value); break;
+    case 'death':
+      return roll({ dice: [20], label: 'Death save', onDone: t => {
+        let msg;
+        if (t === 20) { S.hp.cur = 1; S.deathS = S.deathF = 0; msg = 'Natural 20: you wake with 1 HP!'; }
+        else if (t === 1) { S.deathF += 2; msg = 'Natural 1: two failures.'; }
+        else if (t >= 10) { S.deathS++; msg = 'Success.'; } else { S.deathF++; msg = 'Failure.'; }
+        if (S.deathS >= 3) { msg = 'Three successes: you are stable.'; }
+        if (S.deathF >= 3) { S.deathF = 3; msg = 'Three failures: Lumen dies. Revivify, anyone?'; }
+        save(); renderSheet(); return msg;
+      } });
+    case 'hd':
+      S.hdUsed++; save();
+      return roll({ dice: [8], mod: mod('con'), label: 'Hit die', onDone: t => {
+        const n = Math.max(0, t); S.hp.cur = Math.min(maxHP(), curHP() + n); save(); renderSheet(); return `You regain ${n} HP.`;
+      } });
+    case 'short': S.cdUsed = 0; toast('Short rest: Channel Divinity is back. Spend hit dice to heal.'); break;
+    case 'long':
+      S.hp.cur = maxHP(); S.hp.temp = 0; S.slotsUsed = S.slotsUsed.map(() => 0); S.cdUsed = 0; S.goodberryCast = false;
+      S.deathS = S.deathF = 0; S.hdUsed = Math.max(0, S.hdUsed - Math.max(1, Math.floor(S.level / 2)));
+      toast('Long rest: full HP, all spell slots, Goodberry and Channel Divinity back.'); break;
+    case 'slot': { const li = +k, i = +el.dataset.i; S.slotsUsed[li] = i < S.slotsUsed[li] ? i : i + 1; break; }
+    case 'slotsel': S.slotSel = +k; break;
+    case 'heal': castHeal(HEALS[+k]); break;
+    case 'gb-cast': S.goodberryCast = true; S.berries = 10; toast('Ten berries. Each heals 4 (1 + 3 from Disciple of Life).'); break;
+    case 'gb-feed': S.berries--; toast('Berry given: it heals 4. Eating one takes an action.'); break;
+    case 'gb-eat': S.berries--; S.hp.cur = Math.min(maxHP(), curHP() + 4); break;
+    case 'cd':
+      S.cdUsed++;
+      toast(k === 'preserve' ? `Preserve Life: split ${5 * S.level} HP among creatures within 30 ft, none above half its max HP.`
+        : `Turn Undead: undead within 30 ft make a Wisdom save, DC ${spellDC()}, or flee for 1 minute.`); break;
+    case 'atk': {
+      const t = { mace: ['Mace attack', mod('str')], xbow: ['Crossbow attack', mod('dex')], shill: ['Shillelagh attack', mod('wis')] }[k];
+      return roll({ dice: [20], mod: t[1] + prof(), label: t[0], attack: true });
+    }
+    case 'gbolt': {
+      const l = S.slotSel;
+      if (S.slotsUsed[l - 1] >= slotsOf()[l - 1]) return toast(`No level ${l} slots left.`);
+      S.slotsUsed[l - 1]++; save(); renderSheet();
+      return roll({ dice: [20], mod: spellAtk(), label: `Guiding Bolt attack (slot ${l})`, attack: true });
+    }
+    case 'dmg': return damage(k);
+    case 'export': {
+      const url = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }));
+      const link = Object.assign(document.createElement('a'), { href: url, download: 'brother-lumen.json' });
+      link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); return;
+    }
+    case 'import': return document.getElementById('importFile').click();
+    case 'sec-cycle': { const x = S.secrets[+k], o = Object.keys(KNOWS); x.knows = o[(o.indexOf(x.knows) + 1) % o.length]; break; }
+    case 'sec-del': S.secrets.splice(+k, 1); break;
+    case 'sec-add': {
+      const name = document.getElementById('secName').value.trim(), note = document.getElementById('secNote').value.trim();
+      if (!name) return toast('Type a name first.');
+      S.secrets.push({ name, note, knows: 'undecided' }); break;
+    }
+    case 'reset':
+      if (!resetArmed) { resetArmed = true; setTimeout(() => { resetArmed = false; renderSheet(); }, 3000); break; }
+      S = structuredClone(DEFAULT); resetArmed = false; poolPick = null; break;
+    default: return;
+  }
+  save(); renderAll();
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el && !el.disabled) act(el, e);
+});
+document.addEventListener('change', e => {
+  const f = e.target.dataset.field, k = e.target.dataset.k;
+  if (e.target.id === 'importFile') {
+    const file = e.target.files[0]; if (!file) return;
+    file.text().then(t => {
+      try { const s = JSON.parse(t); if (s.v !== 1) throw 0; S = { ...structuredClone(DEFAULT), ...s }; save(); renderAll(); toast('Sheet imported.'); }
+      catch (err) { toast('That file is not a Brother Lumen sheet.'); }
+    });
+    return;
+  }
+  if (!f) return;
+  if (f === 'base') { const v = parseInt(e.target.value, 10); S.base[k] = v >= 1 && v <= 30 ? v : null; }
+  if (f === 'lineage') S.lineage = e.target.value;
+  if (f === 'ac') S.ac = parseInt(e.target.value, 10) || 0;
+  if (f === 'gold') S.gold = parseInt(e.target.value, 10) || 0;
+  if (f === 'skill') S.skills = e.target.checked ? [...S.skills, k] : S.skills.filter(x => x !== k);
+  save(); renderAll();
+});
+document.addEventListener('input', e => { if (e.target.id === 'notes') { S.notes = e.target.value; save(); } });
+
+// ---------- self-test (?test) ----------
+function selfTest() {
+  const out = [];
+  const ok = (c, m) => out.push((c ? 'PASS ' : 'FAIL ') + m);
+  const FACE_N = { 4: 3, 6: 4, 8: 3, 10: 4, 12: 5, 20: 3 };
+  for (const n of [4, 6, 8, 10, 12, 20]) {
+    const d = DEFS[n];
+    ok(d.faces.length === n, `d${n}: ${d.faces.length} faces`);
+    ok(d.faces.every(f => f.idx.length === FACE_N[n]), `d${n}: every face has ${FACE_N[n]} corners`);
+    ok([...d.values].sort((a, b) => a - b).join() === Array.from({ length: n }, (_, i) => i + 1).join(), `d${n}: values 1..${n} once each`);
+    if (n !== 4) ok(d.faces.every((f, i) => d.faces.some((g, j) => dot(f.n, g.n) < -0.9999 && d.values[i] + d.values[j] === n + 1)), `d${n}: opposite faces sum to ${n + 1}`);
+    // Turn each face to point up (d4: down) and read it back.
+    const body = new CANNON.Body({ mass: 1 }), probe = { sides: n, body };
+    const good = d.faces.every((f, i) => {
+      body.quaternion.setFromVectors(new CANNON.Vec3(...f.n), new CANNON.Vec3(0, n === 4 ? -1 : 1, 0));
+      const r = readDie(probe); return r.value === d.values[i] && r.align > 0.999;
+    });
+    ok(good, `d${n}: reading matches the face turned up`);
+  }
+  const d4 = DEFS[4];
+  ok(d4.faces.every((f, i) => d4.V.every((v, m) => f.idx.includes(m) || d4.cornerVal[m] === d4.values[i])), 'd4: top corner shows the value of the face underneath');
+  const keep = S; S = structuredClone(DEFAULT);
+  S.base = { str: 13, dex: 10, con: 14, int: 8, wis: 15, cha: 12 };
+  ok(score('wis') === 17 && mod('wis') === 3, 'Wisdom 15 + 2 = 17, modifier +3');
+  ok(maxHP() === 10, 'level 1 HP = 8 + Con 2 = 10');
+  ok(spellDC() === 13 && spellAtk() === 5, 'spell DC 13, attack +5');
+  ok(skillBonus(SKILLS[9]) === 5, 'Medicine +5');
+  S.level = 5; ok(prof() === 3 && maxHP() === 38 && cantripDice() === 2 && maxSlot() === 3, 'level 5: prof +3, HP 38, 2 cantrip dice, 3rd-level slots');
+  S.level = 17; ok(prof() === 6 && maxSlot() === 9 && supreme() && cdMax() === 2, 'level 17: prof +6, 9th-level slots, Supreme Healing');
+  S = keep;
+  const fails = out.filter(l => l.startsWith('FAIL')).length;
+  console.log('[selftest]\n' + out.join('\n'));
+  const b = document.getElementById('banner');
+  b.style.display = 'block'; b.style.background = fails ? 'var(--rose)' : 'var(--green)';
+  b.textContent = `self-test: ${out.length - fails} passed, ${fails} failed`;
+  window.selftest = out;
+}
+
+renderAll();
+resize();
+if (new URLSearchParams(location.search).has('test')) selfTest();
+</script>
+</body>
+</html>
