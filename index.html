@@ -82,6 +82,7 @@
   .spell { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
   .spell small { color: var(--dim); }
   .sel { outline: 2px solid var(--gold); }
+  .tg { font-size: 11px; color: var(--gold); border: 1px solid var(--line); border-radius: 6px; padding: 0 4px; margin-left: 5px; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   td, th { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; text-align: left; }
   tr.now td { background: #33283c; }
@@ -155,6 +156,43 @@ const HEALS = [
   { name: 'Heal', min: 6, fixed: l => 70 + 10 * (l - 6), note: 'also ends blindness, deafness, disease' },
 ];
 
+// Spells section. SRD 5.1 unless marked. list: cleric (preparable), cantrip, feat (Magic Initiate).
+// c = concentration, r = ritual, v = a spoken word only (no gestures: the easiest to hide).
+const SPELLS = [
+  { n: 'Guidance', l: 0, list: 'cantrip', c: 1, cast: 'action, touch', d: 'one ability check of theirs gets +1d4' },
+  { n: 'Sacred Flame', l: 0, list: 'cantrip', cast: 'action, 60 ft', d: 'Dex save or radiant damage; cover does not help' },
+  { n: 'Toll the Dead', l: 0, list: 'cantrip', cast: 'action, 60 ft', d: 'Wis save or necrotic damage, more if it is hurt (Xanathar\'s)' },
+  { n: 'Druidcraft', l: 0, list: 'feat', cast: 'action, 30 ft', d: 'small nature tricks: a weather sign, a flower blooms, a candle lit or snuffed' },
+  { n: 'Shillelagh', l: 0, list: 'feat', cast: 'bonus action, touch', d: 'the club uses Wisdom, deals d8, counts as magical; 1 minute' },
+  { n: 'Goodberry', l: 1, list: 'feat', cast: 'action, touch', d: 'ten berries, each heals 4 (Kaarel\'s ruling); once per long rest' },
+  { n: 'Bane', l: 1, list: 'cleric', c: 1, cast: 'action, 30 ft', d: 'up to 3 foes: Cha save or −1d4 on attacks and saves' },
+  { n: 'Bless', l: 1, list: 'cleric', c: 1, cast: 'action, 30 ft', d: 'up to 3 allies add 1d4 to attacks and saves' },
+  { n: 'Command', l: 1, list: 'cleric', v: 1, cast: 'action, 60 ft', d: 'one word: Approach, Drop, Flee, Grovel or Halt; Wis save; not undead' },
+  { n: 'Create or Destroy Water', l: 1, list: 'cleric', cast: 'action, 30 ft', d: '10 gallons made or destroyed, or rain or fog in a 30 ft cube' },
+  { n: 'Cure Wounds', l: 1, list: 'cleric', cast: 'action, touch', d: 'heals 1d8 + Wis, plus Disciple of Life' },
+  { n: 'Detect Evil and Good', l: 1, list: 'cleric', c: 1, cast: 'action, self', d: 'sense undead, fiends, fey and other otherworldly beings, and hallowed or defiled places, within 30 ft' },
+  { n: 'Detect Magic', l: 1, list: 'cleric', c: 1, r: 1, cast: 'action, self', d: 'sense magic within 30 ft; an action shows its aura and school' },
+  { n: 'Detect Poison and Disease', l: 1, list: 'cleric', c: 1, r: 1, cast: 'action, self', d: 'sense and name poisons, poisonous creatures and diseases within 30 ft' },
+  { n: 'Guiding Bolt', l: 1, list: 'cleric', cast: 'action, 120 ft', d: 'spell attack, 4d6 radiant; the next attack on it has advantage' },
+  { n: 'Healing Word', l: 1, list: 'cleric', v: 1, cast: 'bonus action, 60 ft', d: 'heals 1d4 + Wis, plus Disciple of Life' },
+  { n: 'Inflict Wounds', l: 1, list: 'cleric', cast: 'action, touch', d: 'melee spell attack, 3d10 necrotic' },
+  { n: 'Protection from Evil and Good', l: 1, list: 'cleric', c: 1, cast: 'action, touch', d: 'undead, fiends, fey and the like attack it at disadvantage and cannot charm, frighten or possess it; uses up holy water' },
+  { n: 'Purify Food and Drink', l: 1, list: 'cleric', r: 1, cast: 'action, 10 ft', d: 'removes poison and disease from food and drink in a 5 ft sphere' },
+  { n: 'Sanctuary', l: 1, list: 'cleric', cast: 'bonus action, 30 ft', d: 'attackers must pass a Wis save or pick another target; ends if the warded one attacks' },
+  { n: 'Shield of Faith', l: 1, list: 'cleric', c: 1, cast: 'bonus action, 60 ft', d: '+2 AC' },
+  { n: 'Lesser Restoration', l: 2, list: 'cleric', cast: 'action, touch', d: 'ends one disease, or blinded, deafened, paralyzed or poisoned' },
+  { n: 'Spiritual Weapon', l: 2, list: 'cleric', cast: 'bonus action, 60 ft', d: 'a floating weapon: spell attack, 1d8 + Wis force; again each turn as a bonus action; 1 minute' },
+  { n: 'Beacon of Hope', l: 3, list: 'cleric', c: 1, cast: 'action, 30 ft', d: 'allies get advantage on Wis and death saves, and maximum healing' },
+  { n: 'Revivify', l: 3, list: 'cleric', cast: 'action, touch', d: 'back to life with 1 HP if dead under a minute; uses up 300 gp of diamonds' },
+  { n: 'Death Ward', l: 4, list: 'cleric', cast: 'action, touch', d: 'the first drop to 0 HP stops at 1 instead; 8 hours' },
+  { n: 'Guardian of Faith', l: 4, list: 'cleric', v: 1, cast: 'action, 30 ft', d: 'a spectral guardian: foes coming near take 20 radiant, Dex save for half, 60 in all; 8 hours' },
+  { n: 'Mass Cure Wounds', l: 5, list: 'cleric', cast: 'action, 60 ft', d: 'up to 6 creatures heal 3d8 + Wis, plus Disciple of Life' },
+  { n: 'Raise Dead', l: 5, list: 'cleric', cast: '1 hour, touch', d: 'back to life with 1 HP if dead up to 10 days; uses up a 500 gp diamond' },
+];
+// Life domain spells by cleric level (PHB; the SRD's list lacks Guardian of Faith).
+const DOMAIN = [[1, 'Bless'], [1, 'Cure Wounds'], [3, 'Lesser Restoration'], [3, 'Spiritual Weapon'], [5, 'Beacon of Hope'],
+  [5, 'Revivify'], [7, 'Death Ward'], [7, 'Guardian of Faith'], [9, 'Mass Cure Wounds'], [9, 'Raise Dead']];
+
 // ---------- state ----------
 const KEY = 'brother-lumen-v1';
 const DEFAULT = {
@@ -162,6 +200,7 @@ const DEFAULT = {
   lineage: 'wis', pool: [], skills: ['insight', 'medicine', 'persuasion', 'religion'], saves: ['wis', 'cha'],
   ac: 16, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
   slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, gold: 0, notes: '', log: [],
+  prepared: ['Healing Word', 'Guiding Bolt', 'Shield of Faith', 'Sanctuary', 'Command', 'Detect Magic', 'Detect Poison and Disease'],
   secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator, 24', knows: 'knows' }],
 };
 let S = load();
@@ -202,6 +241,15 @@ const saveBonus = a => mod(a) + (S.saves.includes(a) ? prof() : 0);
 const cantripDice = () => 1 + (S.level >= 5) + (S.level >= 11) + (S.level >= 17);
 const cdMax = () => S.level >= 18 ? 3 : S.level >= 6 ? 2 : S.level >= 2 ? 1 : 0;
 const supreme = () => S.level >= 17;
+const prepMax = () => Math.max(1, mod('wis') + S.level);
+const domainSpells = () => DOMAIN.filter(([lv]) => lv <= S.level).map(([, n]) => SPELLS.find(s => s.n === n));
+const canPrepare = s => s.list === 'cleric' && s.l >= 1 && s.l <= maxSlot() && !DOMAIN.some(([, n]) => n === s.n);
+function togglePrep(n) {
+  const i = S.prepared.indexOf(n);
+  if (i >= 0) { S.prepared.splice(i, 1); return true; }
+  if (S.prepared.length >= prepMax()) return false;
+  S.prepared.push(n); return true;
+}
 const KNOWS = { undecided: 'var(--dim)', nothing: 'var(--green)', suspects: 'var(--gold)', knows: 'var(--rose)' };
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -603,7 +651,7 @@ function renderBuilder() {
 }
 
 // ---------- sheet ----------
-let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false;
+let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false, spellEdit = false;
 const hasStats = () => S.pool.length > 0 || AB.some(k => S.base[k] != null);
 function toast(msg) {
   const t = document.getElementById('toast'); t.innerHTML = msg; t.style.display = 'block';
@@ -640,6 +688,14 @@ function renderSheet() {
   ].map(([k, n, hit, dmg, note]) => `<div class="li"><span class="grow"><b>${n}</b><br><span class="sub">${dmg} · ${note}</span></span>
       <button class="b" data-act="atk" data-k="${k}">${fmt(hit)}</button><button class="b" data-act="dmg" data-k="${k}">Dmg</button></div>`).join('');
   const gbL = S.slotSel;
+  const spellRow = (s, btn = '') => `<div class="li"><span class="grow"><b>${s.n}</b>${s.list === 'feat' ? ' <span class="sub">(feat)</span>' : ''}` +
+    `${s.c ? '<span class="tg">C</span>' : ''}${s.r ? '<span class="tg">R</span>' : ''}${s.v ? '<span class="tg">voice</span>' : ''}` +
+    `<br><span class="sub">${s.cast} · ${s.d}</span></span>${btn}</div>`;
+  const pm = prepMax(), np = S.prepared.length;
+  const prepRows = spellEdit
+    ? SPELLS.filter(canPrepare).map(s => { const on = S.prepared.includes(s.n);
+        return spellRow(s, `<button class="chip ${on ? 'sel' : ''}" data-act="prep" data-k="${SPELLS.indexOf(s)}" ${on || np < pm ? '' : 'disabled'}>${on ? '✓' : '+'}</button>`); }).join('')
+    : SPELLS.filter(s => S.prepared.includes(s.n)).map(s => spellRow(s)).join('');
 
   document.getElementById('sheet').innerHTML = `
     <div class="li head"><div class="grow"><h1>Brother Lumen</h1><div class="sub">Life cleric of Lathander · Custom Lineage · Acolyte</div></div>
@@ -706,6 +762,21 @@ function renderSheet() {
       <div class="li"><span class="grow"><b>Guiding Bolt</b> (slot ${gbL})<br><span class="sub">${3 + gbL}d6 radiant · next attack on it has advantage</span></span>
         <button class="b" data-act="gbolt">${fmt(spellAtk())}</button><button class="b" data-act="dmg" data-k="gbolt">Dmg</button></div>
     </div>
+
+    <h2>Spells</h2>
+    <div class="card list">
+      <div class="sub">Cantrips, at will</div>
+      ${SPELLS.filter(s => s.l === 0).map(s => spellRow(s)).join('')}
+      <div class="sub" style="margin-top:6px">Always prepared: Life domain</div>
+      ${domainSpells().map(s => spellRow(s)).join('')}
+      <div class="li" style="margin-top:6px"><span class="grow sub" style="${np > pm ? 'color:var(--rose)' : ''}">Prepared ${np} / ${pm} · change after a long rest</span>
+        <button data-act="spell-edit">${spellEdit ? 'Done' : 'Change'}</button></div>
+      ${prepRows}
+      <div class="sub" style="margin-top:6px">Feat, once per long rest</div>
+      ${spellRow(SPELLS.find(s => s.n === 'Goodberry'))}
+    </div>
+    <div class="sub" style="margin-top:4px">C: concentration, one such spell at a time. R: ritual, cast 10 minutes slower with no slot.
+      Voice: a spoken word only, no gestures.</div>
 
     <h2>Saving throws</h2>
     <div class="card list">${AB.map(a => `<div class="li"><span class="grow">${S.saves.includes(a) ? '● ' : '○ '}${AB_NAME[a]}</span>
@@ -928,6 +999,8 @@ function act(el, e) {
       if (!name) return toast('Type a name first.');
       S.secrets.push({ name, note, knows: 'undecided' }); break;
     }
+    case 'spell-edit': spellEdit = !spellEdit; break;
+    case 'prep': if (!togglePrep(SPELLS[k].n)) return toast(`${prepMax()} spells prepared already. Remove one first.`); break;
     case 'reset':
       if (!resetArmed) { resetArmed = true; setTimeout(() => { resetArmed = false; renderSheet(); }, 3000); break; }
       S = structuredClone(DEFAULT); resetArmed = false; poolPick = null; break;
@@ -945,7 +1018,7 @@ document.addEventListener('change', e => {
   if (e.target.id === 'importFile') {
     const file = e.target.files[0]; if (!file) return;
     file.text().then(t => {
-      try { const s = JSON.parse(t); if (s.v !== 1) throw 0; S = { ...structuredClone(DEFAULT), ...s }; save(); renderAll(); toast('Sheet imported.'); }
+      try { const s = JSON.parse(t); if (s.v !== 1) throw 0; S = migrate(s); save(); renderAll(); toast('Sheet imported.'); }
       catch (err) { toast('That file is not a Brother Lumen sheet.'); }
     });
     return;
@@ -995,7 +1068,20 @@ function selfTest() {
   ok(skillBonus(SKILLS[9]) === 5, 'Medicine +5');
   S.level = 5; ok(prof() === 3 && maxHP() === 38 && cantripDice() === 2 && maxSlot() === 3, 'level 5: prof +3, HP 38, 2 cantrip dice, 3rd-level slots');
   S.level = 17; ok(prof() === 6 && maxSlot() === 9 && supreme() && cdMax() === 2, 'level 17: prof +6, 9th-level slots, Supreme Healing');
+  S.level = 2; ok(prepMax() === 5, 'prepared spells: Wis +3 + level 2 = 5');
+  ok(domainSpells().map(s => s.n).join() === 'Bless,Cure Wounds', 'level 2 domain spells: Bless, Cure Wounds');
+  S.level = 3; ok(domainSpells().length === 4, 'level 3 adds two domain spells');
+  S.level = 2; S.prepared = ['Bane', 'Command', 'Sanctuary', 'Shield of Faith', 'Healing Word'];
+  ok(!togglePrep('Guiding Bolt') && S.prepared.length === 5, 'a sixth spell is refused at the cap');
+  ok(togglePrep('Bane') && !S.prepared.includes('Bane'), 'unpreparing a spell frees a place');
   S = keep;
+  ok(SPELLS.filter(s => s.l === 1 && s.list === 'cleric').length === 15, 'all 15 SRD 1st-level cleric spells listed');
+  ok(DEFAULT.prepared.length === 7 && DEFAULT.prepared.every(n => SPELLS.some(s => s.n === n && s.l === 1 && s.list === 'cleric')),
+    'seven 1st-level cleric spells prepared by default');
+  ok(migrate({ v: 1, rev: 3, level: 2 }).prepared.length === 7, 'an older save gets the default prepared list');
+  renderSheet();
+  const sheetText = document.getElementById('sheet').textContent;
+  ok(sheetText.includes(`Prepared ${S.prepared.length} / ${prepMax()}`) && S.prepared.every(n => sheetText.includes(n)), 'the sheet lists the prepared spells');
   const tabs = [...document.querySelectorAll('.tab')], was = tabs.find(t => t.classList.contains('active'));
   tabs.forEach(t => t.classList.toggle('active', t.id === 'tab-sheet'));
   window.scrollTo(0, 600);
