@@ -83,6 +83,7 @@
   .spell { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
   .spell small { color: var(--dim); }
   .sel { outline: 2px solid var(--gold); }
+  .sep { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; }
   .tg { font-size: 11px; color: var(--gold); border: 1px solid var(--line); border-radius: 6px; padding: 0 4px; margin-left: 5px; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   td, th { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; text-align: left; }
@@ -794,9 +795,9 @@ function renderSheet() {
     <div class="card list">
       <div class="sub">Cantrips, at will</div>
       ${SPELLS.filter(s => s.l === 0).map(s => spellRow(s)).join('')}
-      <div class="sub" style="margin-top:6px">Always prepared: Life domain</div>
+      <div class="sub sep">Always prepared: Life domain</div>
       ${domainSpells().map(s => spellRow(s)).join('')}
-      <div class="li" style="margin-top:6px"><span class="grow sub" style="${np > pm ? 'color:var(--rose)' : ''}">Prepared ${np} / ${pm} · change after a long rest</span>
+      <div class="li sep"><span class="grow sub" style="${np > pm ? 'color:var(--rose)' : ''}">Prepared ${np} / ${pm} · change after a long rest</span>
         <button data-act="spell-edit">${spellEdit ? 'Done' : 'Change'}</button></div>
       ${prepRows}
       <div class="sub" style="margin-top:6px">Feat, once per long rest</div>
@@ -1142,6 +1143,9 @@ function selfTest() {
   const insight = SKILLS.find(s => s[0] === 'insight');
   ok(document.getElementById('sheet').textContent.includes(`passive Insight ${10 + skillBonus(insight)}`), 'the sheet shows passive Insight');
   ok(['perception', 'insight'].every(k => document.querySelectorAll(`#sheet [data-act=skill][data-k=${k}]`).length === 2), 'tapping a passive score rolls its skill');
+  const seps = [...document.querySelectorAll('#sheet .sep')].map(el => el.textContent);
+  ok(['Always prepared', 'Prepared '].every(t => seps.some(s => s.trim().startsWith(t)))
+    && [...document.querySelectorAll('#sheet .sep')].every(el => getComputedStyle(el).borderTopStyle === 'solid'), 'a line above the domain and prepared groups');
   window.scrollTo(0, 0); tabs.forEach(t => t.classList.toggle('active', t === was));
   const fails = out.filter(l => l.startsWith('FAIL')).length;
   console.log('[selftest]\n' + out.join('\n'));
