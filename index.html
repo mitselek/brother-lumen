@@ -49,6 +49,7 @@
   .chip .n { color: var(--gold); font-weight: 700; margin-left: 3px; }
   #log { list-style: none; margin: 0; padding: 0 12px 12px; }
   #log li { border-top: 1px solid var(--line); padding: 6px 0; display: flex; gap: 8px; }
+  #log li.more { justify-content: center; }
   #log .t { font-weight: 800; color: var(--gold); min-width: 2.4em; text-align: right; }
   #log .d { color: var(--dim); font-size: 13px; }
 
@@ -105,7 +106,7 @@
 <body>
 <div id="banner"></div>
 <main>
-  <section id="tab-tray" class="tab active">
+  <section id="tab-tray" class="tab">
     <div id="stage"><canvas id="c"></canvas><div id="labels"></div><div id="result"></div></div>
     <div class="pad">
       <div class="row">
@@ -118,12 +119,12 @@
     </div>
     <ol id="log"></ol>
   </section>
-  <section id="tab-sheet" class="tab"><div class="pad" id="sheet"></div></section>
+  <section id="tab-sheet" class="tab active"><div class="pad" id="sheet"></div></section>
   <section id="tab-road" class="tab"><div class="pad" id="road"></div></section>
 </main>
 <nav>
-  <button data-act="tab" data-k="tray" class="on">Tray</button>
-  <button data-act="tab" data-k="sheet">Sheet</button>
+  <button data-act="tab" data-k="tray">Tray</button>
+  <button data-act="tab" data-k="sheet" class="on">Sheet</button>
   <button data-act="tab" data-k="road">Roadmap</button>
 </nav>
 <div id="toast"></div>
@@ -681,8 +682,9 @@ function placeLabels() {
 }
 
 function renderLog() {
-  document.getElementById('log').innerHTML = S.log.map(e =>
-    `<li><span class="t">${e.total}</span><span><div>${e.label}</div><div class="d">${e.detail}</div></span></li>`).join('');
+  document.getElementById('log').innerHTML = (logOpen ? S.log : S.log.slice(0, 6)).map(e =>
+    `<li class="roll"><span class="t">${e.total}</span><span><div>${e.label}</div><div class="d">${e.detail}</div></span></li>`).join('') +
+    (S.log.length > 6 ? `<li class="more"><button data-act="log-more">${logOpen ? 'Show less' : `Show more (${S.log.length - 6})`}</button></li>` : '');
 }
 
 // ---------- dice builder ----------
@@ -696,7 +698,7 @@ function renderBuilder() {
 }
 
 // ---------- sheet ----------
-let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false, spellEdit = false, coinKind = 'gp';
+let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false, spellEdit = false, coinKind = 'gp', logOpen = false;
 const hasStats = () => S.pool.length > 0 || AB.some(k => S.base[k] != null);
 function toast(msg) {
   const t = document.getElementById('toast'); t.innerHTML = msg; t.style.display = 'block';
@@ -953,6 +955,7 @@ function act(el, e) {
   const a = el.dataset.act, k = el.dataset.k;
   switch (a) {
     case 'tab': return showTab(k);
+    case 'log-more': logOpen = !logOpen; return renderLog();
     case 'quick':
       if (k === 'd20') roll({ dice: [20], label: 'd20' });
       if (k === 'adv') roll({ dice: [20, 20], keep: 'kh1', label: 'Advantage' });
@@ -1129,6 +1132,7 @@ document.addEventListener('input', e => { if (e.target.id === 'notes') { S.notes
 function selfTest() {
   const out = [];
   const ok = (c, m) => out.push((c ? 'PASS ' : 'FAIL ') + m);
+  ok(document.querySelector('.tab.active')?.id === 'tab-sheet' && document.querySelector('nav button.on')?.dataset.k === 'sheet', 'the page opens on the Sheet tab');
   const FACE_N = { 4: 3, 6: 4, 8: 3, 10: 4, 12: 5, 20: 3 };
   for (const n of [4, 6, 8, 10, 12, 20]) {
     const d = DEFS[n];
@@ -1195,6 +1199,12 @@ function selfTest() {
   ok(S.prepared.every(n => document.querySelector(`#sheet [data-act=cast][data-k="${SPELLS.findIndex(s => s.n === n)}"]`)), 'every prepared spell has a Cast button');
   ok(SPELLS.filter(s => s.r && S.prepared.includes(s.n)).every(s => document.querySelector(`#sheet [data-act=ritual][data-k="${SPELLS.indexOf(s)}"]`)),
     'prepared rituals have a Ritual button');
+  const keepLog = S.log; S.log = Array.from({ length: 20 }, (_, i) => ({ label: 'roll ' + i, total: i, detail: '' }));
+  logOpen = false; renderLog();
+  ok(document.querySelectorAll('#log li.roll').length === 6 && document.querySelector('#log [data-act=log-more]'), 'the roll log shows the last 6, with Show more');
+  logOpen = true; renderLog();
+  ok(document.querySelectorAll('#log li.roll').length === 20, 'Show more shows all 20');
+  S.log = keepLog; logOpen = false; renderLog();
   const tabs = [...document.querySelectorAll('.tab')], was = tabs.find(t => t.classList.contains('active'));
   tabs.forEach(t => t.classList.toggle('active', t.id === 'tab-sheet'));
   window.scrollTo(0, 600);
