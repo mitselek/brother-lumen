@@ -159,35 +159,36 @@ const HEALS = [
 ];
 
 // Spells section. SRD 5.1 unless marked. list: cleric (preparable), cantrip, feat (Magic Initiate).
-// c = concentration, r = ritual, v = a spoken word only (no gestures: the easiest to hide).
+// c = concentration, r = ritual, v = a spoken word only (no gestures). save: who saves against it.
+// dmg: damage-roll buttons instead of Cast; atk: a spell attack, rolled on Cast, with this damage key.
 const SPELLS = [
   { n: 'Guidance', l: 0, list: 'cantrip', c: 1, cast: 'action, touch', d: 'one ability check of theirs gets +1d4' },
-  { n: 'Sacred Flame', l: 0, list: 'cantrip', cast: 'action, 60 ft', d: 'Dex save or radiant damage; cover does not help' },
-  { n: 'Toll the Dead', l: 0, list: 'cantrip', cast: 'action, 60 ft', d: 'Wis save or necrotic damage, more if it is hurt (Xanathar\'s)' },
+  { n: 'Sacred Flame', l: 0, list: 'cantrip', save: 'Dex', dmg: [['flame', 'Cast']], cast: 'action, 60 ft', d: 'Dex save or radiant damage; cover does not help' },
+  { n: 'Toll the Dead', l: 0, list: 'cantrip', save: 'Wis', dmg: [['toll8', 'd8'], ['toll12', 'd12']], cast: 'action, 60 ft', d: 'Wis save or necrotic damage, more if it is hurt (Xanathar\'s)' },
   { n: 'Druidcraft', l: 0, list: 'feat', cast: 'action, 30 ft', d: 'small nature tricks: a weather sign, a flower blooms, a candle lit or snuffed' },
   { n: 'Shillelagh', l: 0, list: 'feat', cast: 'bonus action, touch', d: 'the club uses Wisdom, deals d8, counts as magical; 1 minute' },
   { n: 'Goodberry', l: 1, list: 'feat', cast: 'action, touch', d: 'ten berries, each heals 4 (Kaarel\'s ruling); once per long rest' },
-  { n: 'Bane', l: 1, list: 'cleric', c: 1, cast: 'action, 30 ft', d: 'up to 3 foes: Cha save or −1d4 on attacks and saves' },
+  { n: 'Bane', l: 1, list: 'cleric', c: 1, save: 'Cha', cast: 'action, 30 ft', d: 'up to 3 foes: Cha save or −1d4 on attacks and saves' },
   { n: 'Bless', l: 1, list: 'cleric', c: 1, cast: 'action, 30 ft', d: 'up to 3 allies add 1d4 to attacks and saves' },
-  { n: 'Command', l: 1, list: 'cleric', v: 1, cast: 'action, 60 ft', d: 'one word: Approach, Drop, Flee, Grovel or Halt; Wis save; not undead' },
+  { n: 'Command', l: 1, list: 'cleric', v: 1, save: 'Wis', cast: 'action, 60 ft', d: 'one word: Approach, Drop, Flee, Grovel or Halt; Wis save; not undead' },
   { n: 'Create or Destroy Water', l: 1, list: 'cleric', cast: 'action, 30 ft', d: '10 gallons made or destroyed, or rain or fog in a 30 ft cube' },
   { n: 'Cure Wounds', l: 1, list: 'cleric', cast: 'action, touch', d: 'heals 1d8 + Wis, plus Disciple of Life' },
   { n: 'Detect Evil and Good', l: 1, list: 'cleric', c: 1, cast: 'action, self', d: 'sense undead, fiends, fey and other otherworldly beings, and hallowed or defiled places, within 30 ft' },
   { n: 'Detect Magic', l: 1, list: 'cleric', c: 1, r: 1, cast: 'action, self', d: 'sense magic within 30 ft; an action shows its aura and school' },
   { n: 'Detect Poison and Disease', l: 1, list: 'cleric', c: 1, r: 1, cast: 'action, self', d: 'sense and name poisons, poisonous creatures and diseases within 30 ft' },
-  { n: 'Guiding Bolt', l: 1, list: 'cleric', cast: 'action, 120 ft', d: 'spell attack, 4d6 radiant; the next attack on it has advantage' },
+  { n: 'Guiding Bolt', l: 1, list: 'cleric', atk: 'gbolt', cast: 'action, 120 ft', d: 'spell attack, 4d6 radiant; the next attack on it has advantage' },
   { n: 'Healing Word', l: 1, list: 'cleric', v: 1, cast: 'bonus action, 60 ft', d: 'heals 1d4 + Wis, plus Disciple of Life' },
-  { n: 'Inflict Wounds', l: 1, list: 'cleric', cast: 'action, touch', d: 'melee spell attack, 3d10 necrotic' },
+  { n: 'Inflict Wounds', l: 1, list: 'cleric', atk: 'inflict', cast: 'action, touch', d: 'melee spell attack, 3d10 necrotic' },
   { n: 'Protection from Evil and Good', l: 1, list: 'cleric', c: 1, cast: 'action, touch', d: 'undead, fiends, fey and the like attack it at disadvantage and cannot charm, frighten or possess it; uses up holy water' },
   { n: 'Purify Food and Drink', l: 1, list: 'cleric', r: 1, cast: 'action, 10 ft', d: 'removes poison and disease from food and drink in a 5 ft sphere' },
-  { n: 'Sanctuary', l: 1, list: 'cleric', cast: 'bonus action, 30 ft', d: 'attackers must pass a Wis save or pick another target; ends if the warded one attacks' },
+  { n: 'Sanctuary', l: 1, list: 'cleric', save: 'Wis', cast: 'bonus action, 30 ft', d: 'attackers must pass a Wis save or pick another target; ends if the warded one attacks' },
   { n: 'Shield of Faith', l: 1, list: 'cleric', c: 1, cast: 'bonus action, 60 ft', d: '+2 AC' },
   { n: 'Lesser Restoration', l: 2, list: 'cleric', cast: 'action, touch', d: 'ends one disease, or blinded, deafened, paralyzed or poisoned' },
   { n: 'Spiritual Weapon', l: 2, list: 'cleric', cast: 'bonus action, 60 ft', d: 'a floating weapon: spell attack, 1d8 + Wis force; again each turn as a bonus action; 1 minute' },
   { n: 'Beacon of Hope', l: 3, list: 'cleric', c: 1, cast: 'action, 30 ft', d: 'allies get advantage on Wis and death saves, and maximum healing' },
   { n: 'Revivify', l: 3, list: 'cleric', cast: 'action, touch', d: 'back to life with 1 HP if dead under a minute; uses up 300 gp of diamonds' },
   { n: 'Death Ward', l: 4, list: 'cleric', cast: 'action, touch', d: 'the first drop to 0 HP stops at 1 instead; 8 hours' },
-  { n: 'Guardian of Faith', l: 4, list: 'cleric', v: 1, cast: 'action, 30 ft', d: 'a spectral guardian: foes coming near take 20 radiant, Dex save for half, 60 in all; 8 hours' },
+  { n: 'Guardian of Faith', l: 4, list: 'cleric', v: 1, save: 'Dex', cast: 'action, 30 ft', d: 'a spectral guardian: foes coming near take 20 radiant, Dex save for half, 60 in all; 8 hours' },
   { n: 'Mass Cure Wounds', l: 5, list: 'cleric', cast: 'action, 60 ft', d: 'up to 6 creatures heal 3d8 + Wis, plus Disciple of Life' },
   { n: 'Raise Dead', l: 5, list: 'cleric', cast: '1 hour, touch', d: 'back to life with 1 HP if dead up to 10 days; uses up a 500 gp diamond' },
 ];
@@ -202,6 +203,7 @@ const DEFAULT = {
   lineage: 'wis', pool: [], skills: ['insight', 'medicine', 'persuasion', 'religion'], saves: ['wis', 'cha'],
   ac: 16, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
   slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, coins: { gp: 0, sp: 0, cp: 0 }, notes: '', log: [],
+  conc: null,
   prepared: ['Healing Word', 'Guiding Bolt', 'Shield of Faith', 'Sanctuary', 'Command', 'Detect Magic', 'Inflict Wounds'],
   secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator, 24', knows: 'knows' }],
 };
@@ -256,6 +258,22 @@ function togglePrep(n) {
   if (i >= 0) { S.prepared.splice(i, 1); return true; }
   if (S.prepared.length >= prepMax()) return false;
   S.prepared.push(n); return true;
+}
+
+// Casting from the Spells section: spend the slot (a ritual spends none), track concentration, say what happens.
+const concDC = dmg => Math.max(10, Math.floor(dmg / 2));
+function castSpell(n, ritual = false) {
+  const s = SPELLS.find(x => x.n === n);
+  let how = 'at will';
+  if (s.l > 0 && ritual) how = 'ritual, 10 minutes longer, no slot';
+  else if (s.l > 0) {
+    const l = Math.max(s.l, S.slotSel);
+    if (S.slotsUsed[l - 1] >= (slotsOf()[l - 1] || 0)) return `No level ${l} slots left.`;
+    S.slotsUsed[l - 1]++; how = `slot ${l}`;
+  }
+  let msg = `${n} (${how}): ${s.d}.${s.save ? ` ${s.save} save, DC ${spellDC()}.` : ''}`;
+  if (s.c) { if (S.conc && S.conc !== n) msg += ` ${S.conc} ends.`; S.conc = n; }
+  return msg;
 }
 
 // Purse. 1 gp = 10 sp = 100 cp.
@@ -718,11 +736,19 @@ function renderSheet() {
   const spellRow = (s, btn = '') => `<div class="li"><span class="grow"><b>${s.n}</b>${s.list === 'feat' ? ' <span class="sub">(feat)</span>' : ''}` +
     `${s.c ? '<span class="tg">C</span>' : ''}${s.r ? '<span class="tg">R</span>' : ''}${s.v ? '<span class="tg">voice</span>' : ''}` +
     `<br><span class="sub">${s.cast} · ${s.d}</span></span>${btn}</div>`;
+  const castBtns = s => {
+    const i = SPELLS.indexOf(s);
+    if (s.n === 'Goodberry') return `<button class="b" data-act="gb-cast" ${S.goodberryCast ? 'disabled' : ''}>Cast</button>`;
+    if (s.dmg) return s.dmg.map(([k, t]) => `<button class="b" data-act="dmg" data-k="${k}">${t}</button>`).join('');
+    return `<button class="b" data-act="cast" data-k="${i}">Cast</button>` +
+      (s.r ? `<button class="b" data-act="ritual" data-k="${i}">Ritual</button>` : '') +
+      (s.atk ? `<button class="b" data-act="dmg" data-k="${s.atk}">Dmg</button>` : '');
+  };
   const pm = prepMax(), np = S.prepared.length;
   const prepRows = spellEdit
     ? SPELLS.filter(canPrepare).map(s => { const on = S.prepared.includes(s.n);
         return spellRow(s, `<button class="chip ${on ? 'sel' : ''}" data-act="prep" data-k="${SPELLS.indexOf(s)}" ${on || np < pm ? '' : 'disabled'}>${on ? '✓' : '+'}</button>`); }).join('')
-    : SPELLS.filter(s => S.prepared.includes(s.n)).map(s => spellRow(s)).join('');
+    : SPELLS.filter(s => S.prepared.includes(s.n)).map(s => spellRow(s, castBtns(s))).join('');
 
   document.getElementById('sheet').innerHTML = `
     <div class="li head"><div class="grow"><h1>Brother Lumen</h1><div class="sub">Life cleric of Lathander · Custom Lineage · Acolyte</div></div>
@@ -793,15 +819,18 @@ function renderSheet() {
 
     <h2>Spells</h2>
     <div class="card list">
-      <div class="sub">Cantrips, at will</div>
-      ${SPELLS.filter(s => s.l === 0).map(s => spellRow(s)).join('')}
+      ${S.conc ? `<div class="li"><span class="grow">Concentrating on <b>${S.conc}</b><br><span class="sub">damage rolls a Con save; another C spell ends it</span></span>
+        <button data-act="conc-end">End</button></div>` : ''}
+      ${maxSlot() > 1 ? `<div class="row"><span class="sub">Cast with slot:</span>${slotSel}</div>` : ''}
+      <div class="sub ${S.conc || maxSlot() > 1 ? 'sep' : ''}">Cantrips, at will</div>
+      ${SPELLS.filter(s => s.l === 0).map(s => spellRow(s, castBtns(s))).join('')}
       <div class="sub sep">Always prepared: Life domain</div>
-      ${domainSpells().map(s => spellRow(s)).join('')}
+      ${domainSpells().map(s => spellRow(s, castBtns(s))).join('')}
       <div class="li sep"><span class="grow sub" style="${np > pm ? 'color:var(--rose)' : ''}">Prepared ${np} / ${pm} · change after a long rest</span>
         <button data-act="spell-edit">${spellEdit ? 'Done' : 'Change'}</button></div>
       ${prepRows}
       <div class="sub" style="margin-top:6px">Feat, once per long rest</div>
-      ${spellRow(SPELLS.find(s => s.n === 'Goodberry'))}
+      ${spellRow(SPELLS.find(s => s.n === 'Goodberry'), castBtns(SPELLS.find(s => s.n === 'Goodberry')))}
     </div>
     <div class="sub" style="margin-top:4px">C: concentration, one such spell at a time. R: ritual, cast 10 minutes slower with no slot.
       Voice: a spoken word only, no gestures.</div>
@@ -890,6 +919,7 @@ function hpChange(kind, n) {
   let cur = curHP();
   if (kind === 'dmg') {
     const fromTemp = Math.min(S.hp.temp, n); S.hp.temp -= fromTemp; cur = Math.max(0, cur - (n - fromTemp));
+    if (cur === 0) S.conc = null;
   } else if (kind === 'heal') { cur = Math.min(maxHP(), cur + n); if (cur > 0) S.deathS = S.deathF = 0; }
   else S.hp.temp = Math.max(S.hp.temp, n);
   S.hp.cur = cur;
@@ -911,9 +941,10 @@ function damage(k) {
   const ds = S.level >= 14 ? 2 : S.level >= 8 ? 1 : 0, nd = cantripDice(), radiant = Array(ds).fill(8);
   const t = {
     club: [[4, ...radiant], mod('str'), 'Club damage'], shill: [[8, ...radiant], mod('wis'), 'Shillelagh damage'], xbow: [[8, ...radiant], mod('dex'), 'Crossbow damage'],
- flame: [Array(nd).fill(8), 0, 'Sacred Flame (radiant)'],
-    toll8: [Array(nd).fill(8), 0, 'Toll the Dead'], toll12: [Array(nd).fill(12), 0, 'Toll the Dead (hurt target)'],
+    flame: [Array(nd).fill(8), 0, `Sacred Flame (radiant), Dex save DC ${spellDC()}`],
+    toll8: [Array(nd).fill(8), 0, `Toll the Dead, Wis save DC ${spellDC()}`], toll12: [Array(nd).fill(12), 0, `Toll the Dead (hurt target), Wis save DC ${spellDC()}`],
     gbolt: [Array(3 + S.slotSel).fill(6), 0, `Guiding Bolt (slot ${S.slotSel})`],
+    inflict: [Array(2 + S.slotSel).fill(10), 0, `Inflict Wounds (slot ${S.slotSel}, necrotic)`],
   }[k];
   roll({ dice: t[0], mod: t[1], label: t[2] });
 }
@@ -976,8 +1007,18 @@ function act(el, e) {
     case 'init': return roll({ dice: [20], mod: mod('dex'), label: 'Initiative' });
     case 'save': return roll({ dice: [20], mod: saveBonus(k), label: `${AB_NAME[k]} save` });
     case 'skill': { const s = SKILLS.find(x => x[0] === k); return roll({ dice: [20], mod: skillBonus(s), label: s[1] }); }
-    case 'dmg-take': case 'heal-take': case 'temp-take':
-      hpChange(a.split('-')[0], +document.getElementById('hpAmt').value); break;
+    case 'dmg-take': case 'heal-take': case 'temp-take': {
+      const n = +document.getElementById('hpAmt').value, held = S.conc;
+      hpChange(a.split('-')[0], n);
+      if (a === 'dmg-take' && held && S.conc && n > 0) { // damage while concentrating: a Con save
+        const dc = concDC(n); save(); renderAll();
+        return roll({ dice: [20], mod: saveBonus('con'), label: `Keep ${held}? Con save, DC ${dc}`, onDone: t => {
+          if (t >= dc) return `${held} holds.`;
+          S.conc = null; save(); renderSheet(); return `${held} ends.`;
+        } });
+      }
+      break;
+    }
     case 'death':
       return roll({ dice: [20], label: 'Death save', onDone: t => {
         let msg;
@@ -996,7 +1037,7 @@ function act(el, e) {
     case 'short': S.cdUsed = 0; toast('Short rest: Channel Divinity is back. Spend hit dice to heal.'); break;
     case 'long':
       S.hp.cur = maxHP(); S.hp.temp = 0; S.slotsUsed = S.slotsUsed.map(() => 0); S.cdUsed = 0; S.goodberryCast = false;
-      S.deathS = S.deathF = 0; S.hdUsed = Math.max(0, S.hdUsed - Math.max(1, Math.floor(S.level / 2)));
+      S.deathS = S.deathF = 0; S.hdUsed = Math.max(0, S.hdUsed - Math.max(1, Math.floor(S.level / 2))); S.conc = null;
       toast('Long rest: full HP, all spell slots, Goodberry and Channel Divinity back.'); break;
     case 'slot': { const li = +k, i = +el.dataset.i; S.slotsUsed[li] = i < S.slotsUsed[li] ? i : i + 1; break; }
     case 'slotsel': S.slotSel = +k; break;
@@ -1039,6 +1080,16 @@ function act(el, e) {
       else if (!spend(n, coinKind)) return toast(`Not enough: ${(purse() / 100).toFixed(2)} gp in all.`);
       break;
     }
+    case 'cast': {
+      const s = SPELLS[+k], heal = HEALS.find(h => h.name === s.n);
+      if (heal) { castHeal(heal); break; }
+      const msg = castSpell(s.n);
+      if (msg.startsWith('No level')) return toast(msg);
+      if (s.atk) { save(); renderAll(); return roll({ dice: [20], mod: spellAtk(), label: `${s.n} attack (slot ${Math.max(s.l, S.slotSel)})`, attack: true }); }
+      toast(msg); break;
+    }
+    case 'ritual': toast(castSpell(SPELLS[+k].n, true)); break;
+    case 'conc-end': toast(`${S.conc} ends.`); S.conc = null; break;
     case 'spell-edit': spellEdit = !spellEdit; break;
     case 'prep': if (!togglePrep(SPELLS[k].n)) return toast(`${prepMax()} spells prepared already. Remove one first.`); break;
     case 'reset':
@@ -1123,6 +1174,15 @@ function selfTest() {
   gain(3, 'cp'); ok(S.coins.cp === 3 && purse() === 103, 'gain 3 cp; 103 cp in all');
   const mg = migrate({ v: 1, rev: 3, level: 2, gold: 12 });
   ok(mg.coins.gp === 12 && mg.coins.sp === 0 && mg.coins.cp === 0 && !('gold' in mg), 'rev 4: the old gold count becomes gold coins');
+  S.level = 2; S.slotsUsed = [0, 0, 0, 0, 0, 0, 0, 0, 0]; S.slotSel = 1; S.conc = null;
+  castSpell('Bless'); ok(S.slotsUsed[0] === 1 && S.conc === 'Bless', 'casting Bless spends a slot and starts concentration');
+  const m2 = castSpell('Shield of Faith'); ok(S.conc === 'Shield of Faith' && m2.includes('Bless ends'), 'a second concentration spell ends the first');
+  castSpell('Command'); ok(S.slotsUsed[0] === 3 && S.conc === 'Shield of Faith', 'Command spends a slot and leaves concentration alone');
+  castSpell('Detect Magic', true); ok(S.slotsUsed[0] === 3 && S.conc === 'Detect Magic', 'a ritual spends no slot');
+  ok(castSpell('Bane').startsWith('No level 1') && S.conc === 'Detect Magic', 'with no slot left nothing happens');
+  castSpell('Guidance'); ok(S.slotsUsed[0] === 3 && S.conc === 'Guidance', 'a cantrip spends no slot');
+  ok(concDC(30) === 15 && concDC(7) === 10, 'concentration save DC: 10 or half the damage');
+  S.hp = { cur: 5, temp: 0 }; hpChange('dmg', 9); ok(S.conc === null, 'dropping to 0 HP ends concentration');
   S = keep;
   ok(SPELLS.filter(s => s.l === 1 && s.list === 'cleric').length === 15, 'all 15 SRD 1st-level cleric spells listed');
   ok(DEFAULT.prepared.length === 7 && DEFAULT.prepared.every(n => SPELLS.some(s => s.n === n && s.l === 1 && s.list === 'cleric')),
@@ -1132,6 +1192,9 @@ function selfTest() {
   const sheetText = document.getElementById('sheet').textContent;
   ok(sheetText.includes(`Prepared ${S.prepared.length} / ${prepMax()}`) && S.prepared.every(n => sheetText.includes(n)), 'the sheet lists the prepared spells');
   ok(sheetText.includes(`In all: ${(purse() / 100).toFixed(2)} gp`), 'the sheet shows the purse total');
+  ok(S.prepared.every(n => document.querySelector(`#sheet [data-act=cast][data-k="${SPELLS.findIndex(s => s.n === n)}"]`)), 'every prepared spell has a Cast button');
+  ok(SPELLS.filter(s => s.r && S.prepared.includes(s.n)).every(s => document.querySelector(`#sheet [data-act=ritual][data-k="${SPELLS.indexOf(s)}"]`)),
+    'prepared rituals have a Ritual button');
   const tabs = [...document.querySelectorAll('.tab')], was = tabs.find(t => t.classList.contains('active'));
   tabs.forEach(t => t.classList.toggle('active', t.id === 'tab-sheet'));
   window.scrollTo(0, 600);
