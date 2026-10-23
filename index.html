@@ -78,7 +78,7 @@
   .list { display: grid; gap: 4px; }
   .li { display: flex; align-items: center; gap: 8px; }
   .li .grow { flex: 1; }
-  .li button.b { min-width: 58px; font-weight: 700; }
+  .li button.b { min-width: 58px; font-weight: 700; order: -1; } /* roll buttons on the left */
   .spell { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
   .spell small { color: var(--dim); }
   .sel { outline: 2px solid var(--gold); }
@@ -744,7 +744,7 @@ function renderSheet() {
       <div class="card stat"><div class="v">${spellDC()}</div><div class="k">spell save DC</div></div>
       <div class="card stat"><div class="v">${fmt(spellAtk())}</div><div class="k">spell attack</div></div>
     </div>
-    <div class="sub" style="margin-top:4px">Darkvision 60 ft · Common, Celestial · passive Perception ${10 + skillBonus(SKILLS[11])} · ${S.level >= 4 ? 'chain mail + shield (AC 18)' : 'scale mail + shield, Stealth at disadvantage; chain mail at level 4'}</div>
+    <div class="sub" style="margin-top:4px">Darkvision 60 ft · Common, Celestial · passive Perception ${10 + skillBonus(SKILLS[11])} · passive Insight ${10 + skillBonus(SKILLS.find(s => s[0] === 'insight'))} · ${S.level >= 4 ? 'chain mail + shield (AC 18)' : 'scale mail + shield, Stealth at disadvantage; chain mail at level 4'}</div>
 
     <h2>Hit points</h2>
     <div class="card">
@@ -1134,6 +1134,11 @@ function selfTest() {
   window.scrollTo(0, 600);
   const head = document.querySelector('#sheet .head');
   ok(head && window.scrollY > 0 && Math.abs(head.getBoundingClientRect().top) < 1, 'sheet header stays at the top while scrolling');
+  const rollRows = [...document.querySelectorAll('#sheet .li')].filter(r => r.querySelector('button.b'));
+  ok(rollRows.length > 20 && rollRows.every(r => r.querySelector('button.b').getBoundingClientRect().left < r.querySelector('.grow').getBoundingClientRect().left),
+    'roll buttons sit left of their labels');
+  const insight = SKILLS.find(s => s[0] === 'insight');
+  ok(document.getElementById('sheet').textContent.includes(`passive Insight ${10 + skillBonus(insight)}`), 'the sheet shows passive Insight');
   window.scrollTo(0, 0); tabs.forEach(t => t.classList.toggle('active', t === was));
   const fails = out.filter(l => l.startsWith('FAIL')).length;
   console.log('[selftest]\n' + out.join('\n'));
