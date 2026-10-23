@@ -196,11 +196,11 @@ const DOMAIN = [[1, 'Bless'], [1, 'Cure Wounds'], [3, 'Lesser Restoration'], [3,
 // ---------- state ----------
 const KEY = 'brother-lumen-v1';
 const DEFAULT = {
-  v: 1, rev: 3, level: 2, base: { str: 12, dex: 10, con: 15, int: 9, wis: 18, cha: 11 },
+  v: 1, rev: 4, level: 2, base: { str: 12, dex: 10, con: 15, int: 9, wis: 18, cha: 11 },
   lineage: 'wis', pool: [], skills: ['insight', 'medicine', 'persuasion', 'religion'], saves: ['wis', 'cha'],
   ac: 16, hp: { cur: null, temp: 0 }, deathS: 0, deathF: 0, hdUsed: 0, slotsUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, gold: 0, notes: '', log: [],
-  prepared: ['Healing Word', 'Guiding Bolt', 'Shield of Faith', 'Sanctuary', 'Command', 'Detect Magic', 'Detect Poison and Disease'],
+  slotSel: 1, cdUsed: 0, goodberryCast: false, berries: 0, coins: { gp: 0, sp: 0, cp: 0 }, notes: '', log: [],
+  prepared: ['Healing Word', 'Guiding Bolt', 'Shield of Faith', 'Sanctuary', 'Command', 'Detect Magic', 'Inflict Wounds'],
   secrets: [{ name: 'Tesaak', note: 'childhood friend from Koidu; gladiator, 24', knows: 'knows' }],
 };
 let S = load();
@@ -221,6 +221,11 @@ function migrate(s) {
   if (!(s.rev >= 3)) { // rev 3: Lumen reached level 2 (2026-10-22)
     m.level = Math.max(m.level, 2);
     m.rev = 3;
+  }
+  if (!(s.rev >= 4)) { // rev 4: one gold count becomes a purse of gold, silver and copper
+    m.coins = { gp: s.gold || 0, sp: 0, cp: 0 };
+    delete m.gold;
+    m.rev = 4;
   }
   return m;
 }
@@ -249,6 +254,26 @@ function togglePrep(n) {
   if (i >= 0) { S.prepared.splice(i, 1); return true; }
   if (S.prepared.length >= prepMax()) return false;
   S.prepared.push(n); return true;
+}
+
+// Purse. 1 gp = 10 sp = 100 cp.
+const COIN = { gp: 100, sp: 10, cp: 1 };
+const purse = () => Object.keys(COIN).reduce((t, d) => t + S.coins[d] * COIN[d], 0);
+function gain(n, c) { S.coins[c] += n; }
+// Pay n coins of kind c: that kind and smaller ones first, then break a bigger coin and take change.
+function spend(n, c) {
+  let owe = n * COIN[c];
+  if (owe > purse()) return false;
+  for (const d of ['gp', 'sp', 'cp'].filter(d => COIN[d] <= COIN[c])) {
+    const k = Math.min(S.coins[d], Math.floor(owe / COIN[d])); S.coins[d] -= k; owe -= k * COIN[d];
+  }
+  while (owe > 0) {
+    const have = ['cp', 'sp', 'gp'].filter(d => S.coins[d] > 0);
+    const d = have.find(d => COIN[d] >= owe) ?? have[have.length - 1];
+    S.coins[d]--; owe -= COIN[d];
+    if (owe < 0) for (const x of ['sp', 'cp'].filter(x => COIN[x] < COIN[d])) { const k = Math.floor(-owe / COIN[x]); S.coins[x] += k; owe += k * COIN[x]; }
+  }
+  return true;
 }
 const KNOWS = { undecided: 'var(--dim)', nothing: 'var(--green)', suspects: 'var(--gold)', knows: 'var(--rose)' };
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -651,7 +676,7 @@ function renderBuilder() {
 }
 
 // ---------- sheet ----------
-let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false, spellEdit = false;
+let poolPick = null, resetArmed = false, statsArmed = false, statsRolling = false, spellEdit = false, coinKind = 'gp';
 const hasStats = () => S.pool.length > 0 || AB.some(k => S.base[k] != null);
 function toast(msg) {
   const t = document.getElementById('toast'); t.innerHTML = msg; t.style.display = 'block';
@@ -799,9 +824,14 @@ function renderSheet() {
       <div class="sub">Tap the status to change it: undecided, nothing, suspects, knows.</div>
     </div>
 
-    <h2>Gold and notes</h2>
+    <h2>Money and notes</h2>
     <div class="card">
-      <div class="li"><span class="grow">Gold pieces</span><input type="number" data-field="gold" value="${S.gold}" style="width:6em"></div>
+      <div class="grid3">${['gp', 'sp', 'cp'].map(d => `<div class="stat"><input type="number" min="0" data-field="coin" data-k="${d}" value="${S.coins[d]}"
+        style="width:5em;font-size:18px;font-weight:800"><div class="k">${{ gp: 'gold', sp: 'silver', cp: 'copper' }[d]}</div></div>`).join('')}</div>
+      <div class="row" style="margin-top:8px"><input type="number" id="coinAmt" min="1" placeholder="0" inputmode="numeric">
+        <select data-field="coinKind">${['gp', 'sp', 'cp'].map(d => `<option ${coinKind === d ? 'selected' : ''}>${d}</option>`).join('')}</select>
+        <button data-act="coin-gain" style="color:var(--green)">Gain</button><button data-act="coin-spend" style="color:var(--rose)">Spend</button></div>
+      <div class="sub" style="margin:4px 0">In all: ${(purse() / 100).toFixed(2)} gp. 1 gp = 10 sp = 100 cp; spending makes change.</div>
       <div class="sub" style="margin:4px 0">Revivify needs 300 gp of diamonds per cast.</div>
       <textarea id="notes" rows="6" style="width:100%"></textarea>
     </div>
@@ -999,6 +1029,13 @@ function act(el, e) {
       if (!name) return toast('Type a name first.');
       S.secrets.push({ name, note, knows: 'undecided' }); break;
     }
+    case 'coin-gain': case 'coin-spend': {
+      const n = parseInt(document.getElementById('coinAmt').value, 10);
+      if (!(n > 0)) return toast('Type an amount first.');
+      if (a === 'coin-gain') gain(n, coinKind);
+      else if (!spend(n, coinKind)) return toast(`Not enough: ${(purse() / 100).toFixed(2)} gp in all.`);
+      break;
+    }
     case 'spell-edit': spellEdit = !spellEdit; break;
     case 'prep': if (!togglePrep(SPELLS[k].n)) return toast(`${prepMax()} spells prepared already. Remove one first.`); break;
     case 'reset':
@@ -1027,7 +1064,8 @@ document.addEventListener('change', e => {
   if (f === 'base') { const v = parseInt(e.target.value, 10); S.base[k] = v >= 1 && v <= 30 ? v : null; }
   if (f === 'lineage') S.lineage = e.target.value;
   if (f === 'ac') S.ac = parseInt(e.target.value, 10) || 0;
-  if (f === 'gold') S.gold = parseInt(e.target.value, 10) || 0;
+  if (f === 'coin') S.coins[k] = Math.max(0, parseInt(e.target.value, 10) || 0);
+  if (f === 'coinKind') coinKind = e.target.value;
   if (f === 'skill') S.skills = e.target.checked ? [...S.skills, k] : S.skills.filter(x => x !== k);
   save(); renderAll();
 });
@@ -1074,6 +1112,14 @@ function selfTest() {
   S.level = 2; S.prepared = ['Bane', 'Command', 'Sanctuary', 'Shield of Faith', 'Healing Word'];
   ok(!togglePrep('Guiding Bolt') && S.prepared.length === 5, 'a sixth spell is refused at the cap');
   ok(togglePrep('Bane') && !S.prepared.includes('Bane'), 'unpreparing a spell frees a place');
+  S.coins = { gp: 0, sp: 5, cp: 3 }; ok(spend(7, 'cp') && S.coins.sp === 4 && S.coins.cp === 6, 'spend 7 cp from 5 sp 3 cp: a silver broken, 4 sp 6 cp left');
+  S.coins = { gp: 2, sp: 0, cp: 0 }; ok(spend(5, 'sp') && S.coins.gp === 1 && S.coins.sp === 5, 'spend 5 sp from 2 gp: change in silver');
+  S.coins = { gp: 0, sp: 25, cp: 0 }; ok(spend(1, 'gp') && S.coins.sp === 15, 'spend 1 gp paid in silver');
+  S.coins = { gp: 2, sp: 0, cp: 4 }; ok(spend(15, 'sp') && S.coins.gp === 0 && S.coins.sp === 5 && S.coins.cp === 4, 'spend 15 sp from 2 gp 4 cp: both gold broken, copper kept');
+  S.coins = { gp: 1, sp: 0, cp: 0 }; ok(!spend(2, 'gp') && S.coins.gp === 1, 'overspending is refused and changes nothing');
+  gain(3, 'cp'); ok(S.coins.cp === 3 && purse() === 103, 'gain 3 cp; 103 cp in all');
+  const mg = migrate({ v: 1, rev: 3, level: 2, gold: 12 });
+  ok(mg.coins.gp === 12 && mg.coins.sp === 0 && mg.coins.cp === 0 && !('gold' in mg), 'rev 4: the old gold count becomes gold coins');
   S = keep;
   ok(SPELLS.filter(s => s.l === 1 && s.list === 'cleric').length === 15, 'all 15 SRD 1st-level cleric spells listed');
   ok(DEFAULT.prepared.length === 7 && DEFAULT.prepared.every(n => SPELLS.some(s => s.n === n && s.l === 1 && s.list === 'cleric')),
@@ -1082,6 +1128,7 @@ function selfTest() {
   renderSheet();
   const sheetText = document.getElementById('sheet').textContent;
   ok(sheetText.includes(`Prepared ${S.prepared.length} / ${prepMax()}`) && S.prepared.every(n => sheetText.includes(n)), 'the sheet lists the prepared spells');
+  ok(sheetText.includes(`In all: ${(purse() / 100).toFixed(2)} gp`), 'the sheet shows the purse total');
   const tabs = [...document.querySelectorAll('.tab')], was = tabs.find(t => t.classList.contains('active'));
   tabs.forEach(t => t.classList.toggle('active', t.id === 'tab-sheet'));
   window.scrollTo(0, 600);
