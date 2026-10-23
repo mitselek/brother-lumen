@@ -79,6 +79,7 @@
   .li { display: flex; align-items: center; gap: 8px; }
   .li .grow { flex: 1; }
   .li button.b { min-width: 58px; font-weight: 700; order: -1; } /* roll buttons on the left */
+  button.lnk { min-height: 0; padding: 0; border: 0; background: none; color: var(--gold); font-size: inherit; text-decoration: underline dotted; }
   .spell { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
   .spell small { color: var(--dim); }
   .sel { outline: 2px solid var(--gold); }
@@ -744,7 +745,8 @@ function renderSheet() {
       <div class="card stat"><div class="v">${spellDC()}</div><div class="k">spell save DC</div></div>
       <div class="card stat"><div class="v">${fmt(spellAtk())}</div><div class="k">spell attack</div></div>
     </div>
-    <div class="sub" style="margin-top:4px">Darkvision 60 ft · Common, Celestial · passive Perception ${10 + skillBonus(SKILLS[11])} · passive Insight ${10 + skillBonus(SKILLS.find(s => s[0] === 'insight'))} · ${S.level >= 4 ? 'chain mail + shield (AC 18)' : 'scale mail + shield, Stealth at disadvantage; chain mail at level 4'}</div>
+    <div class="sub" style="margin-top:4px">Darkvision 60 ft · Common, Celestial · ${['perception', 'insight'].map(k => { const s = SKILLS.find(x => x[0] === k);
+      return `<button class="lnk" data-act="skill" data-k="${k}">passive ${s[1]} ${10 + skillBonus(s)}</button>`; }).join(' · ')} · ${S.level >= 4 ? 'chain mail + shield (AC 18)' : 'scale mail + shield, Stealth at disadvantage; chain mail at level 4'}</div>
 
     <h2>Hit points</h2>
     <div class="card">
@@ -1139,6 +1141,7 @@ function selfTest() {
     'roll buttons sit left of their labels');
   const insight = SKILLS.find(s => s[0] === 'insight');
   ok(document.getElementById('sheet').textContent.includes(`passive Insight ${10 + skillBonus(insight)}`), 'the sheet shows passive Insight');
+  ok(['perception', 'insight'].every(k => document.querySelectorAll(`#sheet [data-act=skill][data-k=${k}]`).length === 2), 'tapping a passive score rolls its skill');
   window.scrollTo(0, 0); tabs.forEach(t => t.classList.toggle('active', t === was));
   const fails = out.filter(l => l.startsWith('FAIL')).length;
   console.log('[selftest]\n' + out.join('\n'));
